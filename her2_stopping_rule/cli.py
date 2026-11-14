@@ -40,6 +40,7 @@ from .steps import (
     s05a_affinity,
     s06a_optimisation,
     s06b_denovo,
+    s06c_antifold,
     s07_fold,
     s08_calibrate,
     s09_epitope,
@@ -71,6 +72,10 @@ STEPS: Final[dict[str, tuple[StepFn, str]]] = {
         "ProteinMPNN redesigns the framework into the de novo track",
     ),
     "03b_rfd4": (s03b_rfd4.run, "RFD4-Proteina generates the de novo branch (GPU)"),
+    "06c_antifold": (
+        s06c_antifold.run,
+        "DE NOVO v2: AntiFold redesigns the framework with CDRs held fixed",
+    ),
     "02_guard": (s02_guard.run, "abguard verdict on every live construct"),
     "07_fold": (
         s07_fold.run,
