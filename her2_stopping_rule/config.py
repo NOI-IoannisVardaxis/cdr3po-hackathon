@@ -118,7 +118,19 @@ class Config:
 
     # step 9 epitope
     contact_cutoff_a: float = 5.0
+    #: Fraction of the *baseline's own* recovered epitope a design must match.
+    #: The threshold is derived, not chosen: trastuzumab is folded by the same
+    #: model and we measure how much of its native epitope that model even
+    #: reproduces. Demanding more of a design than the model manages on the
+    #: molecule the epitope was defined from would be meaningless.
+    epitope_recovery_fraction: float = 0.9
+    #: Fallback only, used when no baseline fold exists to calibrate against.
+    #: Any run that falls back records that it did.
     min_epitope_recovery: float = 0.75
+    #: Fold a control without the 1N8Z template. With the template the model is
+    #: told where trastuzumab binds, so recovering that epitope is partly
+    #: circular; a design that finds it unprompted is the stronger evidence.
+    fold_without_template: bool = True
 
     # step 11 rank
     n_clusters: int = 24

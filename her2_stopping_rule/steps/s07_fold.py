@@ -30,6 +30,43 @@ if TYPE_CHECKING:  # pragma: no cover
     from ..funnel import Funnel
 
 
+#: Identifier for the trastuzumab control folded alongside the designs.
+BASELINE_ID = "baseline_trastuzumab"
+
+
+def baseline_row() -> pl.DataFrame:
+    """Build the trastuzumab control as a one-row design table.
+
+    Folded through exactly the same path as the designs, so its scores are
+    comparable: a baseline measured a different way is not a baseline.
+
+    Returns:
+        A single row carrying the native sequences.
+
+    Examples:
+        >>> row = baseline_row()
+        >>> row.height
+        1
+        >>> row["design_id"][0]
+        'baseline_trastuzumab'
+        >>> bool(row["is_baseline"][0])
+        True
+    """
+    from ..config import CDR3_IMGT, TRASTUZUMAB_VH, TRASTUZUMAB_VL
+
+    return pl.DataFrame(
+        {
+            "design_id": [BASELINE_ID],
+            "cdr3_imgt": [CDR3_IMGT],
+            "heavy_sequence": [TRASTUZUMAB_VH],
+            "light_sequence": [TRASTUZUMAB_VL],
+            "kind": ["paired"],
+            "is_baseline": [True],
+            "track_predicted": ["baseline"],
+        }
+    )
+
+
 def write_fasta(df: pl.DataFrame, path: Path) -> Path:
     """Write constructs as a FASTA of paired chains.
 
@@ -82,6 +119,7 @@ def fold_with(
     df: pl.DataFrame,
     cfg: Config,
     workdir: Path,
+    use_template: bool = True,
 ) -> dict[str, dict[str, float]]:
     """Fold every construct with one model and return its scores.
 
@@ -90,6 +128,9 @@ def fold_with(
         df: Live designs to fold.
         cfg: Pipeline configuration.
         workdir: Directory mounted into the container.
+        use_template: Give the model the 1N8Z template. Without it the model is
+            not told where trastuzumab binds, so recovering that epitope is
+            evidence rather than an echo of the input.
 
     Returns:
         Per-design metrics, empty when the model is unavailable or fails.
@@ -105,35 +146,37 @@ def fold_with(
     if not available(model):
         return {}
 
-    out_dir = workdir / "fold" / model
+    label = model if use_template else f"{model}_notemplate"
+    out_dir = workdir / "fold" / label
     if out_dir.exists():
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     write_fasta(df, out_dir / "designs.fasta")
 
+    template = workdir / "template.cif"
+    args = [
+        "python",
+        "-m",
+        "apheris_boltz.cli",
+        "predict",
+        "--input",
+        str((out_dir / "designs.fasta").relative_to(workdir)),
+        "--output",
+        str(out_dir.relative_to(workdir)),
+        "--write-detailed-scores",
+        "true",
+        "--num-diffusion-samples",
+        "1",
+        "--seeds",
+        str(cfg.seed),
+        "--query-failures",
+        "skip",
+    ]
+    if use_template and template.exists():
+        args += ["--template-paths", str(template.relative_to(workdir))]
+
     try:
-        foundry_run(
-            model,
-            [
-                "python",
-                "-m",
-                "apheris_boltz.cli",
-                "predict",
-                "--input",
-                str((out_dir / "designs.fasta").relative_to(workdir)),
-                "--output",
-                str(out_dir.relative_to(workdir)),
-                "--write-detailed-scores",
-                "true",
-                "--num-diffusion-samples",
-                "1",
-                "--seeds",
-                str(cfg.seed),
-                "--query-failures",
-                "skip",
-            ],
-            workdir=workdir,
-        )
+        foundry_run(model, args, workdir=workdir)
     except (FoundryError, OSError):
         return {}
     return parse_refold_metrics(out_dir / "refold_metrics.csv")
@@ -161,13 +204,35 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
 
     workdir = cfg.results_dir / "foundry"
     workdir.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(cfg.path("structure"), workdir / "template.cif")
+
+    # Fold trastuzumab itself alongside the designs, through exactly the same
+    # path. Step 9 needs to know how much of the native epitope this model
+    # reproduces on the molecule the epitope was defined from: a threshold
+    # stricter than that would be asking designs to beat the measurement.
+    to_fold = pl.concat(
+        [tbl.conform(live), tbl.conform(baseline_row())], how="vertical"
+    )
 
     primary, secondary = cfg.fold_models[0], cfg.fold_models[1]
-    scores_primary = fold_with(primary, live, cfg, workdir)
-    scores_secondary = fold_with(secondary, live, cfg, workdir)
+    scores_primary = fold_with(primary, to_fold, cfg, workdir)
+    scores_secondary = fold_with(secondary, to_fold, cfg, workdir)
+
+    scores_no_template: dict[str, dict[str, float]] = {}
+    if cfg.fold_without_template:
+        scores_no_template = fold_with(
+            primary, to_fold, cfg, workdir, use_template=False
+        )
 
     (workdir / "fold_scores.json").write_text(
-        json.dumps({primary: scores_primary, secondary: scores_secondary}, indent=2)
+        json.dumps(
+            {
+                primary: scores_primary,
+                secondary: scores_secondary,
+                f"{primary}_no_template": scores_no_template,
+            },
+            indent=2,
+        )
     )
 
     ids = live["design_id"].to_list()
@@ -203,15 +268,28 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
         with funnel.step(
             "07_fold",
             rows_in=live.height,
-            thresholds={"models": list(cfg.fold_models), "seed": cfg.seed},
+            thresholds={
+                "models": list(cfg.fold_models),
+                "seed": cfg.seed,
+                "fold_without_template": cfg.fold_without_template,
+                "baseline_control": BASELINE_ID,
+            },
         ) as rec:
             rec.rows_out = live.height
             got = len(scores_primary), len(scores_secondary)
+            base = BASELINE_ID in scores_primary
             spreads = merged["model_spread"].drop_nulls()
             median = spreads.median() if spreads.len() else None
-            rec.notes = f"{primary} scored {got[0]}, {secondary} scored {got[1]}; " + (
-                f"median two-model spread {float(median):.4f}"
-                if isinstance(median, (int, float))
-                else "no spread measured, both models unavailable"
+            rec.notes = (
+                f"{primary} scored {got[0]}, {secondary} scored {got[1]}; "
+                + (
+                    f"median two-model spread {float(median):.4f}"
+                    if isinstance(median, (int, float))
+                    else "no spread measured, both models unavailable"
+                )
+                + (
+                    f"; baseline control folded: {base}"
+                    f"; no-template control: {len(scores_no_template)} scored"
+                )
             )
     return merged

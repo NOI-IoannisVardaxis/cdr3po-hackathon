@@ -46,6 +46,8 @@ SCHEMA: Final[dict[str, Any]] = {
     "model_spread": pl.Float64,
     # step 9 epitope
     "epitope_recovery": pl.Float64,
+    "epitope_recovery_no_template": pl.Float64,
+    "is_baseline": pl.Boolean,
     "contact_cutoff_a": pl.Float64,
     "disulfide_sg_distance": pl.Float64,
     "disulfide_formed": pl.Boolean,
@@ -107,8 +109,17 @@ def conform(df: pl.DataFrame) -> pl.DataFrame:
         for name, dtype in SCHEMA.items()
         if name not in df.columns
     ]
+    # Cast the columns that are present, too. A step that builds rows with
+    # pl.DataFrame(...) and no schema gets polars' inferred types -- Int64
+    # where this schema says Int32 -- and the mismatch only surfaces later,
+    # as a vstack failure in whichever step happens to concatenate next.
+    casts = [
+        pl.col(name).cast(dtype, strict=False).alias(name)
+        for name, dtype in SCHEMA.items()
+        if name in df.columns
+    ]
     extra = [c for c in df.columns if c not in SCHEMA]
-    return df.with_columns(missing).select(list(SCHEMA) + extra)
+    return df.with_columns(missing).with_columns(casts).select(list(SCHEMA) + extra)
 
 
 def load(results_dir: Path) -> pl.DataFrame:

@@ -271,3 +271,16 @@ def test_reference_prune_never_hides_a_collision() -> None:
         # pruned scan must find it too.
         close = full < 3
         assert (pruned[close] == full[close]).all(), k
+
+
+def test_conform_casts_to_the_schema_type() -> None:
+    """A step that builds rows without a schema still concatenates cleanly.
+
+    polars infers Int64 where the table declares Int32, and the mismatch only
+    surfaces later as a vstack failure in whichever step concatenates next.
+    """
+    loose = pl.DataFrame({"design_id": ["a"], "n_mutations": [3]})
+    assert loose["n_mutations"].dtype == pl.Int64
+    assert tbl.conform(loose)["n_mutations"].dtype == pl.Int32
+    # The real failure: concatenating a loose frame onto a conformed one.
+    pl.concat([tbl.conform(tbl.empty()), tbl.conform(loose)], how="vertical")
