@@ -1,0 +1,8 @@
+[flake8]
+exclude = 
+    .venv
+    build
+# Cognitive complexity, ie. "How hard is it to understand the code?"
+max-cognitive-complexity = 7
+
+select = CC

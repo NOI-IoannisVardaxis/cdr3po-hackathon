@@ -1,0 +1,67 @@
+[build-system]
+requires = [
+    "setuptools==67.8.0",
+    "setuptools_scm[toml]==6.2",
+    "wheel==0.40.0"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "her2-stopping-rule"
+description = "Multi-objective antibody design pipeline for trastuzumab/HER2: affinity, epitope preservation and thermostability, with calibrated filters and an explicit stopping rule."
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "click>=8.1.8",
+]
+version = "0.0.1"
+# dynamic = ["version"]
+
+#[tool.setuptools_scm]
+
+[dependency-groups]
+dev = [
+    "black>=22.12.0",
+    "coverage>=7.0.5",
+    "flake8>=7.0.0",
+    "flake8-cognitive-complexity>=0.1.0",
+    "isort>=5.12.0",
+    "mypy>=1.1.1",
+    "pytest-cov>=4.0.0",
+    "pytest-env>=0.8.1",
+    "pytest>=7.2.1",
+    "ruff>=0.0.256",
+    "types-setuptools>=67.6.0.0",
+]
+
+[project.scripts]
+her2_stopping_rule = "her2_stopping_rule.__main__:main"
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.setuptools]
+packages = [
+    "her2_stopping_rule",
+]
+
+[tool.distutils.bdist_wheel]
+universal = true
+
+[tool.pytest.ini_options]
+addopts = "-rsx -q --cov=her2_stopping_rule --cov-append --cov-config .coveragerc --tb=short  --ignore=setup.py "
+norecursedirs = [
+    ".venv",
+]
+
+[tool.mypy]
+exclude = [".venv", "build"]
+
+[tool.ruff]
+line-length = 88 # Same as Black.
+
+[tool.isort]
+profile = "black"

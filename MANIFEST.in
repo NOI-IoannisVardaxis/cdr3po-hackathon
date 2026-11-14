@@ -1,0 +1,18 @@
+recursive-include tests *
+recursive-exclude * __pycache__
+recursive-exclude .github *
+recursive-exclude docs *
+recursive-exclude * *.py[co]
+
+include README.md
+include *.pkl 
+include *.hdf5
+include *.csv*
+
+exclude .envrc
+exclude *.yaml
+exclude .coveragerc
+exclude .dockerignore
+exclude Makefile
+exclude pytest.ini
+exclude Dockerfile
