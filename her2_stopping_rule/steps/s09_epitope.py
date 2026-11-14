@@ -155,7 +155,12 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
         return df
 
     native = contact_map(load(cfg.path("structure")), cfg.contact_cutoff_a)
-    primary = cfg.fold_models[0]
+    from .s07_fold import fold_label
+
+    # Ask step 7 where it wrote, rather than assuming the model name: with
+    # templates off the directory is <model>_notemplate, and looking in the
+    # wrong one finds nothing and reports it as "no refolds".
+    primary = fold_label(cfg.fold_models[0], not cfg.fold_without_template)
 
     # What does this model manage on the molecule the epitope was defined from?
     from .s07_fold import BASELINE_ID
@@ -190,9 +195,7 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
         # The templated fold was shown where trastuzumab binds, so recovering
         # that epitope is partly an echo of the input. The unprompted fold is
         # the stronger evidence, recorded beside it rather than instead of it.
-        nt_path = find_refold(
-            cfg.results_dir, row["design_id"], f"{primary}_notemplate"
-        )
+        nt_path = find_refold(cfg.results_dir, row["design_id"], primary)
         recoveries_nt.append(
             epitope_recovery(contact_map(load(nt_path), cfg.contact_cutoff_a), native)
             if nt_path is not None

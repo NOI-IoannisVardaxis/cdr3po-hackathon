@@ -36,6 +36,19 @@ IMAGES: Final[dict[str, str]] = {
     "rfd4_her2_novel": f"{REGISTRY}:apheris-rfd4-proteina-v0.3.0-her2-novel-2026-11-09",
 }
 
+#: The CLI module inside each image. They are not interchangeable: sending the
+#: Boltz CLI to OpenFold3 fails, which is how the second model silently scored
+#: nothing on the first full run.
+CLI_MODULE: Final[dict[str, str]] = {
+    "boltz2": "apheris_boltz.cli",
+    "boltz1": "apheris_boltz.cli",
+    "openfold3": "apheris_openfold3.cli",
+    "openfold3_p2": "apheris_openfold3.cli",
+    "protenix2": "apheris_protenix.cli",
+    "mol1": "apheris_mol1.cli",
+    "esmfold2": "apheris_esmfold2.cli",
+}
+
 #: Folding models that accept a template, which gives a binder a fairer check
 #: than folding the target unguided.
 TEMPLATE_CAPABLE: Final[frozenset[str]] = frozenset(

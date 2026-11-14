@@ -24,7 +24,7 @@ import polars as pl
 
 from .. import queries
 from ..config import Config
-from ..foundry import TEMPLATE_CAPABLE, FoundryError, available
+from ..foundry import CLI_MODULE, TEMPLATE_CAPABLE, FoundryError, available
 from ..foundry import run as foundry_run
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -100,6 +100,29 @@ SCORE_KEYS = {
 }
 
 
+def fold_label(model: str, use_template: bool) -> str:
+    """Directory name a fold run writes into.
+
+    Shared with step 9, which has to find the structures again. Hard-coding
+    the model name there is wrong whenever templates are off, and silently
+    finds nothing.
+
+    Args:
+        model: Key from :data:`~her2_stopping_rule.foundry.IMAGES`.
+        use_template: Whether the run was given the 1N8Z template.
+
+    Returns:
+        The directory name under ``foundry/fold/``.
+
+    Examples:
+        >>> fold_label("boltz2", True)
+        'boltz2'
+        >>> fold_label("boltz2", False)
+        'boltz2_notemplate'
+    """
+    return model if use_template else f"{model}_notemplate"
+
+
 def parse_scores(out_dir: Path) -> dict[str, dict[str, float]]:
     """Read per-design scores out of a Foundry predict run.
 
@@ -166,7 +189,7 @@ def fold_with(
     if not available(model):
         return {}
 
-    label = model if use_template else f"{model}_notemplate"
+    label = fold_label(model, use_template)
     out_dir = workdir / "fold" / label
     if out_dir.exists():
         shutil.rmtree(out_dir)
@@ -187,7 +210,7 @@ def fold_with(
     args = [
         "python",
         "-m",
-        "apheris_boltz.cli",
+        CLI_MODULE[model],
         "predict",
         "--input",
         str(query_path.relative_to(workdir)),
@@ -276,8 +299,22 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
                 scores_primary.get(i, {}).get("binder_plddt") for i in ids
             ],
         }
-    ).with_columns(
+    )
+
+    # The spread is only a noise floor if both models can predict the complex
+    # the epitope was defined from. Record it only when the secondary model
+    # clears that bar on the baseline control; otherwise leave it null, and
+    # the stopping rule will say it has nothing to measure against rather
+    # than inventing a threshold from another model's failure.
+    base_primary = scores_primary.get(BASELINE_ID, {}).get("iptm")
+    base_secondary = scores_secondary.get(BASELINE_ID, {}).get("iptm")
+    spread_usable = (
+        base_secondary is not None and base_secondary >= cfg.min_baseline_iptm
+    )
+    annotations = annotations.with_columns(
         (pl.col("_iptm_primary") - pl.col("_iptm_secondary")).abs().alias("_spread")
+        if spread_usable
+        else pl.lit(None, dtype=pl.Float64).alias("_spread")
     )
 
     merged = (
@@ -303,6 +340,10 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
                 "seed": cfg.seed,
                 "fold_without_template": cfg.fold_without_template,
                 "baseline_control": BASELINE_ID,
+                "baseline_iptm_primary": base_primary,
+                "baseline_iptm_secondary": base_secondary,
+                "min_baseline_iptm": cfg.min_baseline_iptm,
+                "spread_usable": spread_usable,
             },
         ) as rec:
             rec.rows_out = live.height

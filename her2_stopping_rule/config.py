@@ -116,6 +116,12 @@ class Config:
 
     # step 7 fold
     fold_models: tuple[str, ...] = ("boltz2", "openfold3")
+    #: A second model may only define the noise floor if it can reproduce the
+    #: complex the epitope was defined from. Measured on the trastuzumab
+    #: baseline, no MSA: Boltz-2 scores ipTM 0.952, OpenFold3 0.152, Protenix
+    #: v2 0.439. Disagreement with a model that cannot predict a solved
+    #: structure measures that model's failure, not uncertainty about ours.
+    min_baseline_iptm: float = 0.70
     n_finalists: int = 96
 
     # step 8 calibrate

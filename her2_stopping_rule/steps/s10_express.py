@@ -57,7 +57,7 @@ def liability_report(df: pl.DataFrame, cfg: Config) -> dict[str, str]:
         pl.col("kind"),
         pl.col("heavy_sequence"),
         pl.col("light_sequence"),
-        pl.col("reason").fill_null("").alias("design_description"),
+        s02_guard.describe_fallback().alias("design_description"),
     )
     with tempfile.TemporaryDirectory() as tmp:
         path = s02_guard.write_submission(payload, Path(tmp) / "designs.csv")

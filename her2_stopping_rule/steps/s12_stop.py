@@ -61,8 +61,11 @@ def decide(df: pl.DataFrame, cfg: Config) -> StopDecision:
             n_kept=min(ranked.height, cfg.n_submit),
             n_available=ranked.height,
             basis=(
-                "no measured spread: step 7 did not run, so the cap is the "
-                "submission limit rather than a stopping rule"
+                "no usable spread: either step 7 did not run, or the second "
+                "model could not reproduce the baseline complex, so its "
+                "disagreement measures its own failure rather than our "
+                "uncertainty. The cap is the submission limit, and this run "
+                "has no stopping rule."
             ),
             stopped_at=None,
         )

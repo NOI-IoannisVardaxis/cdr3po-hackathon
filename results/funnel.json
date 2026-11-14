@@ -127,6 +127,55 @@
         "proteinmpnn_weights": "v_48_020 vanilla"
       },
       "notes": "T=0.4: 48 proposals; T=0.5: 48 proposals; 27 de novo designs under 0.7 identity, 69 rejected above it. Track is confirmed by abguard, never asserted here."
+    },
+    {
+      "step": "07_fold",
+      "rows_in": 68,
+      "rows_out": 68,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "models": [
+          "boltz2",
+          "openfold3"
+        ],
+        "seed": 1,
+        "fold_without_template": true,
+        "baseline_control": "baseline_trastuzumab"
+      },
+      "notes": "boltz2 scored 69, openfold3 scored 0; no spread measured, both models unavailable; baseline control folded: True; no-template control: 69 scored"
+    },
+    {
+      "step": "08_calibrate",
+      "rows_in": 68,
+      "rows_out": 68,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "iptm_cutoff": 0.9513978362083437,
+        "target_fpr": 0.05,
+        "achieved_fpr": 0.04993894993894994,
+        "iptm_auc": 0.6453769673549893,
+        "used_as_filter": false,
+        "source": "iptm_confidence_scores/boltz2_matrix_clean.csv"
+      },
+      "notes": "cutoff 0.951 at 5.0% FPR on 8,190 measured non-binders; AUC 0.645, NOT used as a filter - ipTM does not separate binders from non-binders well enough here to drop designs on it"
+    },
+    {
+      "step": "09_epitope",
+      "rows_in": 68,
+      "rows_out": 68,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "contact_cutoff_a": 5.0,
+        "epitope_threshold": 0.75,
+        "threshold_basis": "fallback constant 0.75: the trastuzumab control was not folded, so there is nothing to calibrate against",
+        "baseline_self_recovery": null,
+        "disulfide_sg_max": 2.5,
+        "native_epitope_residues": 7
+      },
+      "notes": "0/68 refolds found; 0 disulfides confirmed closed; native epitope 7 HER2 residues at 5.0 A; threshold 0.750 - fallback constant 0.75: the trastuzumab control was not folded, so there is nothing to calibrate against"
     }
   ]
 }
