@@ -93,17 +93,20 @@ Six steps. Parallelise: design on the VM's H100, score on Nebius, keep the slow 
 
 - [ ] Find `abguard` on the VM. It is not on `PATH` and not in the bucket; ask the Apheris team at the
       event. Without it we are guessing at the filter that rejects designs outright.
-- [ ] `foundry-toolkit login` — no stored credential on the VM yet, so `module list` fails.
+- [ ] `foundry-toolkit login` — no stored credential, so `module list` and `module describe` fail.
+      Probably not blocking: every image is already pulled, and `docker run` needs no login.
 - [ ] Confirm the novelty thresholds with the organisers (see the warning above).
 - [ ] Decide the track split. Recommendation: weight optimisation heavily, keep a few de novo VHHs as
       a lottery ticket, since the prize pots are equal and de novo will likely be thinner.
 
 **Setup on the VM** (`~/ioannis/her2-stopping-rule`)
 
+Most of the stack is already installed — see [What is on the VM](#what-is-on-the-vm). Only these remain:
+
 - [ ] `aws s3 sync s3://apheris-oslo-hackathon/rfd4-proteina/docs/ ~/rfd4` — docs, `Data/`, `Settings/`
       and `Scripts/run-her2.sh`, the 4-design smoke test.
 - [ ] `aws s3 cp s3://apheris-oslo-hackathon/data/her2-trastuzumab/ data/her2-trastuzumab/ --recursive` (6 MB).
-- [ ] Install `uv` (not present). PyTorch wheels carry their own CUDA, so no toolkit is needed;
+- [ ] `uv pip install torch` if we train our own affinity or thermostability model (step 5).
       `torch.cuda.is_available()` must print `True` before anything else.
 - [ ] Nebius: `bash agent/install.sh`, then `export NEBIUS_CREDS=...`. Keys live outside the repo.
 - [ ] Redeem the JapanFold code ($1,000, one account, the one that runs the jobs) and claim AMASS ($100).
@@ -150,6 +153,30 @@ not pushed to GitHub by then is gone.
 | JapanFold | japanfold.aiand.com | $1,000 credit, RoseTTAFold3, OpenDDE, AF2-IG |
 | AMASS | platform.amass.tech | $100, literature and patents with citations |
 | Data bucket | `s3://apheris-oslo-hackathon` | read-only; `data/README.md` is the index |
+
+### What is on the VM
+
+Checked 14 Nov, 09:45. Almost nothing needs installing — the expensive parts are already there.
+
+| Installed | Detail |
+| --- | --- |
+| All Foundry models | 20 Docker images pulled, ~200 GB: RFD4-Proteina ×3 weights, Boltz-1/2, OpenFold3 ×2, Protenix v1/v2, Mol-1, ESMFold2, MSA |
+| Docker + GPU | **verified**: `--gpus all` reaches the H100 from inside a container |
+| `foundry-toolkit`, `aws`, `nextflow`, `zstd`, `jq`, `git` | on `PATH` |
+| Claude Code 2.1.322, `uv` 0.13.7, `rcsb-mcp`, `codex` | in `~/.local/bin` |
+| CUDA toolkit 13.0 | `/usr/local/cuda-13.0` |
+| foundry-assistant | local Foundry docs Q&A, models downloaded, `~/foundry-assistant` |
+
+| Missing | Cost to fix |
+| --- | --- |
+| **`abguard`** | not on the VM and not in the bucket — **ask Apheris**, no workaround |
+| `immunum` | pip, only if we want the numbering and sequence extraction standalone |
+| PyTorch | `uv pip install torch`, minutes, only for our own models |
+| Nebius skills | `bash agent/install.sh`, ~1 min |
+| RFD4 `Data/`, `Settings/`, `Scripts/` | one `aws s3 sync`, seconds |
+
+`~/.local/bin` is on `PATH` only in a login shell. Over SSH use `ssh ... bash -lc '...'`, or
+`claude`, `uv` and `rcsb-mcp` will look missing when they are not.
 
 **Folding models.** Prefer one that takes a template for binders, which sees the known HER2 structure
 and gives a fairer check: Boltz-2, OpenFold3, Protenix v2, Mol-1. Use two independent models and treat
