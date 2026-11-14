@@ -25,24 +25,29 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
+from sklearn.metrics import roc_auc_score
 
 from ..config import Config
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..funnel import Funnel
 
-#: Calibration sources, cheapest first. Each is a key under the bucket's
-#: ``data/`` prefix and the local path it is cached at.
-SOURCES: tuple[tuple[str, str], ...] = (
-    (
-        "data/zenodo-18390239-ab-ag-complexes/iptm_confidence_scores.zip",
-        "data/raw/calibration/iptm_confidence_scores.zip",
-    ),
-    (
-        "data/sigma2-ab-ag-champloo/chai1_all_per_replica_confidence_metrics.zip",
-        "data/raw/calibration/chai1_all_per_replica_confidence_metrics.zip",
-    ),
-)
+#: Calibration source: a 150 KB archive of square ipTM matrices, one per
+#: folding model, from the Smorodina complexes. 1.8 GB of per-replica metrics
+#: are available too and are not needed -- this holds the same labels.
+CALIBRATION_ZIP = "data/raw/calibration/iptm_confidence_scores.zip"
+
+#: Bucket key, for the message when the file has not been synced.
+CALIBRATION_KEY = "data/zenodo-18390239-ab-ag-complexes/iptm_confidence_scores.zip"
+
+#: Which matrix to prefer, keyed by the folding model we actually use. A cutoff
+#: derived from one model's confidence does not transfer to another's: the
+#: Chai-1 matrix scores the same cognate pair at 0.18 where Boltz-2 scores 0.93.
+MATRIX_FOR_MODEL: dict[str, str] = {
+    "boltz2": "boltz2_matrix_clean.csv",
+    "openfold3": "af3_matrix_clean.csv",
+    "openfold3_p2": "af3_matrix_clean.csv",
+}
 
 #: Column names that plausibly hold an ipTM score, in preference order.
 _IPTM_NAMES = ("iptm", "ipTM", "iptm_score", "interface_ptm")
@@ -59,6 +64,8 @@ class Calibration:
         cutoff: The ipTM threshold.
         target_fpr: False-positive rate the cutoff was chosen to achieve.
         achieved_fpr: Rate actually achieved on the measured negatives.
+        auc: How well the metric separates cognate from non-cognate pairs.
+        discriminative: Whether that separation is good enough to filter on.
         n_negatives: Measured non-binders used.
         n_positives: Measured binders used, when the source has them.
         source: Which file supplied the data.
@@ -68,6 +75,8 @@ class Calibration:
     cutoff: float
     target_fpr: float
     achieved_fpr: float
+    auc: float
+    discriminative: bool
     n_negatives: int
     n_positives: int
     source: str
@@ -98,27 +107,65 @@ def _find_column(frame: pl.DataFrame, names: tuple[str, ...]) -> str | None:
     return None
 
 
-def load_scores(cfg: Config) -> tuple[pl.DataFrame | None, str]:
-    """Load whichever calibration table is available locally.
+def load_matrix(cfg: Config) -> tuple[pl.DataFrame | None, str]:
+    """Load the ipTM matrix for the model this run folds with.
 
     Args:
-        cfg: Pipeline configuration, for the repository root.
+        cfg: Pipeline configuration, for the repository root and fold models.
 
     Returns:
-        The table and the source it came from, or ``(None, "")`` if neither
-        file has been synced.
+        The matrix and the member it came from, or ``(None, "")`` when the
+        archive has not been synced.
     """
-    for _, local in SOURCES:
-        path = cfg.repo_root / local
-        if not path.exists():
-            continue
-        with zipfile.ZipFile(path) as zf:
-            members = [n for n in zf.namelist() if n.endswith(".csv")]
-            if not members:
+    path = cfg.repo_root / CALIBRATION_ZIP
+    if not path.exists():
+        return None, ""
+    wanted = MATRIX_FOR_MODEL.get(cfg.fold_models[0], "boltz2_matrix_clean.csv")
+    with zipfile.ZipFile(path) as zf:
+        members = [n for n in zf.namelist() if n.endswith(".csv")]
+        chosen = next((n for n in members if n.endswith(wanted)), None)
+        if chosen is None:
+            return None, ""
+        with zf.open(chosen) as fh:
+            return pl.read_csv(io.BytesIO(fh.read())), chosen
+
+
+def melt_matrix(matrix: pl.DataFrame) -> tuple[np.ndarray, np.ndarray]:
+    """Turn a square antibody-by-antigen matrix into scored, labelled pairs.
+
+    Each row is an antibody and each column an antigen, both named by PDB id.
+    A pair on the diagonal is cognate -- the antibody with the antigen it was
+    solved against, so a real binder. Every off-diagonal pair is non-cognate:
+    measured, and not binding. That is the label, and it is why 91 rows give
+    91 positives and 8,190 negatives.
+
+    Args:
+        matrix: The matrix as read, its first column holding the row ids.
+
+    Returns:
+        Scores and labels, 1 for cognate and 0 for non-cognate.
+
+    Examples:
+        >>> import polars as pl
+        >>> m = pl.DataFrame({"pdb_1": ["A", "B"], "A": [0.9, 0.2], "B": [0.3, 0.8]})
+        >>> scores, labels = melt_matrix(m)
+        >>> sorted(scores[labels == 1].tolist())
+        [0.8, 0.9]
+        >>> sorted(scores[labels == 0].tolist())
+        [0.2, 0.3]
+    """
+    id_column = matrix.columns[0]
+    rows = matrix[id_column].to_list()
+    scores: list[float] = []
+    labels: list[int] = []
+    for column in matrix.columns[1:]:
+        values = matrix[column].to_list()
+        for row_id, value in zip(rows, values):
+            if value is None:
                 continue
-            with zf.open(members[0]) as fh:
-                return pl.read_csv(io.BytesIO(fh.read())), local
-    return None, ""
+            scores.append(float(value))
+            labels.append(1 if row_id == column else 0)
+    return np.array(scores), np.array(labels)
 
 
 def choose_cutoff(
@@ -191,39 +238,36 @@ def calibrate(cfg: Config) -> Calibration | None:
     """Derive the ipTM cutoff from measured non-binders.
 
     Args:
-        cfg: Pipeline configuration, for ``iptm_fpr``.
+        cfg: Pipeline configuration, for ``iptm_fpr`` and the fold model.
 
     Returns:
-        The calibration, or None when no calibration data is present locally.
+        The calibration, or None when the archive has not been synced.
     """
-    frame, source = load_scores(cfg)
-    if frame is None:
+    matrix, source = load_matrix(cfg)
+    if matrix is None:
         return None
 
-    score_col = _find_column(frame, _IPTM_NAMES)
-    label_col = _find_column(frame, _LABEL_NAMES)
-    if score_col is None or label_col is None:
+    scores, labels = melt_matrix(matrix)
+    if labels.size == 0 or (labels == 0).sum() == 0:
         return None
-
-    clean = frame.select(
-        pl.col(score_col).cast(pl.Float64, strict=False).alias("score"),
-        pl.col(label_col).cast(pl.Int64, strict=False).alias("label"),
-    ).drop_nulls()
-
-    scores = clean["score"].to_numpy()
-    labels = clean["label"].to_numpy()
     cutoff, achieved = choose_cutoff(scores, labels, cfg.iptm_fpr)
+    auc = float(roc_auc_score(labels, scores))
 
     return Calibration(
         cutoff=cutoff,
         target_fpr=cfg.iptm_fpr,
         achieved_fpr=achieved,
+        auc=auc,
+        discriminative=auc >= cfg.min_iptm_auc,
         n_negatives=int((labels == 0).sum()),
         n_positives=int((labels == 1).sum()),
         source=source,
         note=(
-            "cutoff is the ipTM quantile that admits at most the target fraction "
-            "of pairs measured by SPR as non-binding, not a round number"
+            f"ipTM separates cognate from non-cognate at AUC {auc:.3f} on this "
+            f"model. {(scores[labels == 0] >= 0.8).mean():.1%} of measured "
+            "non-binders score at or above 0.8, so a round-number cutoff admits "
+            "most of them. The cutoff below holds the stated false-positive "
+            "rate; whether it is used as a filter depends on the AUC."
         ),
     )
 
@@ -250,7 +294,10 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
 
     result = calibrate(cfg)
     out = df
-    if result is not None and not np.isnan(result.cutoff):
+    # Only filter on a metric that actually discriminates. Where it does not,
+    # dropping designs on it is noise dressed as rigour: the cutoff is still
+    # recorded, and the ranking keeps ipTM only as a weak tie-break.
+    if result is not None and result.discriminative and not np.isnan(result.cutoff):
         (cfg.results_dir / "calibration.json").write_text(
             json.dumps(result.__dict__, indent=2, default=str)
         )
@@ -269,6 +316,8 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
                     "iptm_cutoff": result.cutoff,
                     "target_fpr": result.target_fpr,
                     "achieved_fpr": result.achieved_fpr,
+                    "iptm_auc": result.auc,
+                    "used_as_filter": result.discriminative,
                     "source": result.source,
                 }
                 if result
@@ -278,12 +327,19 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
             rec.rows_out = tbl.alive(out).height
             rec.notes = (
                 f"cutoff {result.cutoff:.3f} at {result.achieved_fpr:.1%} FPR on "
-                f"{result.n_negatives} measured non-binders ({result.source})"
+                f"{result.n_negatives:,} measured non-binders; AUC "
+                f"{result.auc:.3f}, "
+                + (
+                    "used as a filter"
+                    if result.discriminative
+                    else "NOT used as a filter - ipTM does not separate binders "
+                    "from non-binders well enough here to drop designs on it"
+                )
                 if result
                 else (
                     "no calibration data synced; nothing dropped. Fetch with: "
-                    "aws s3 cp s3://apheris-oslo-hackathon/"
-                    f"{SOURCES[0][0]} {SOURCES[0][1]}"
+                    f"aws s3 cp s3://apheris-oslo-hackathon/{CALIBRATION_KEY} "
+                    f"{CALIBRATION_ZIP}"
                 )
             )
     return out

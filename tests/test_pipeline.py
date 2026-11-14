@@ -370,3 +370,32 @@ def test_novelty_threshold_beyond_block_exactness_is_refused() -> None:
     assert_exact_to(len(BLOCKS))
     with pytest.raises(ValueError, match="blocks detect collisions"):
         assert_exact_to(len(BLOCKS) + 1)
+
+
+def test_iptm_is_not_used_as_a_filter_when_it_cannot_discriminate() -> None:
+    """A metric that barely separates binders must not drop designs.
+
+    Measured on the Smorodina complexes, Boltz-2 ipTM separates cognate from
+    non-cognate pairs at AUC 0.645, and 94% of measured non-binders clear 0.70.
+    Filtering on that is noise dressed as rigour.
+    """
+    from her2_stopping_rule.steps.s08_calibrate import calibrate, melt_matrix
+
+    cfg = Config()
+    result = calibrate(cfg)
+    if result is None:
+        pytest.skip("calibration archive not synced")
+    assert result.n_positives == 91
+    assert result.n_negatives == 8190
+    assert result.auc < cfg.min_iptm_auc
+    assert not result.discriminative
+
+
+def test_melt_matrix_labels_the_diagonal_as_cognate() -> None:
+    """Row i against column i is the pair the structure was solved for."""
+    from her2_stopping_rule.steps.s08_calibrate import melt_matrix
+
+    m = pl.DataFrame({"pdb_1": ["A", "B"], "A": [0.9, 0.2], "B": [0.3, 0.8]})
+    scores, labels = melt_matrix(m)
+    assert sorted(scores[labels == 1].tolist()) == [0.8, 0.9]
+    assert sorted(scores[labels == 0].tolist()) == [0.2, 0.3]

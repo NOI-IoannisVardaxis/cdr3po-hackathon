@@ -120,6 +120,11 @@ class Config:
 
     # step 8 calibrate
     iptm_fpr: float = 0.05
+    #: Minimum separation before ipTM is allowed to drop designs. Measured on
+    #: the Smorodina complexes, Boltz-2 scores 8,190 non-cognate pairs at mean
+    #: 0.860 against 0.896 for 91 cognate ones -- 94% of measured non-binders
+    #: clear 0.70. Filtering on a metric that weak is noise dressed as rigour.
+    min_iptm_auc: float = 0.70
 
     # step 9 epitope
     contact_cutoff_a: float = 5.0
