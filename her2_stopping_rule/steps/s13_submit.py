@@ -113,11 +113,43 @@ def write_outputs(df: pl.DataFrame, cfg: Config) -> dict[str, Path]:
         "reason",
     ).write_csv(annotated_path)
 
-    return {
+    paths = {
         "submission": submission_path,
         "shortlist": shortlist_path,
         "annotated": annotated_path,
     }
+
+    # One file per track, ranked on its own. The tracks are validated
+    # independently and the prize pool is split evenly, so each deserves its
+    # own ordered view even though only one list is submitted.
+    for track, name in (("optimisation", "optimisation"), ("de_novo", "denovo")):
+        part = tbl.alive(df).filter(pl.col("track_predicted") == track)
+        if part.height == 0:
+            continue
+        path = cfg.results_dir / f"{name}.csv"
+        part.sort("rank", nulls_last=True).select(
+            "rank",
+            "design_id",
+            "cdr3_imgt",
+            "mutations",
+            "n_mutations",
+            "min_dist_to_provided",
+            "p_high",
+            "cluster",
+            "stability_package",
+            "framework_mutations",
+            "iptm_primary",
+            "iptm_secondary",
+            "model_spread",
+            "epitope_recovery",
+            "disulfide_formed",
+            "heavy_sequence",
+            "light_sequence",
+            "reason",
+        ).write_csv(path)
+        paths[name] = path
+
+    return paths
 
 
 def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataFrame:

@@ -20,7 +20,7 @@ import polars as pl
 
 from ..config import Config
 from ..data import load_blacklist
-from ..novelty import FAR, is_eligible, scan
+from ..novelty import FAR, scan
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..funnel import Funnel
@@ -45,20 +45,39 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
         return df
 
     blacklist = load_blacklist(cfg)
+
+    # Scan one edit-distance group at a time. Distance from trastuzumab bounds
+    # the distance between any two sequences, so a group only needs references
+    # that could possibly be near it. For 3-mutation candidates that is 37,042
+    # of 525,042 references: the difference between minutes and an hour.
     loops = live["cdr3_imgt"].to_list()
-    # Compare on the ten-residue window: S1, R2 and Y13 are constant everywhere.
-    windows = [loop[2:12] for loop in loops]
-    candidates = np.frombuffer("".join(windows).encode(), dtype=np.uint8).reshape(
-        -1, 10
-    )
+    groups = live["n_mutations"].to_list()
 
-    result = scan(candidates, blacklist.windows)
-    eligible = is_eligible(result, cfg.min_dist_to_provided)
+    min_dist = np.full(len(loops), FAR, dtype=np.int32)
+    nearest: list[str | None] = [None] * len(loops)
+    n_compared = 0
+    refs_used: dict[int, int] = {}
 
-    nearest = [
-        blacklist.ids[i] if i >= 0 else None for i in result.nearest_index.tolist()
-    ]
-    distances = [None if d == FAR else int(d) for d in result.min_distance.tolist()]
+    for k in sorted({g for g in groups if g is not None}):
+        rows = [i for i, g in enumerate(groups) if g == k]
+        mask = blacklist.relevant_to(int(k), cfg.min_dist_to_provided)
+        refs = blacklist.windows[mask]
+        ref_ids = [blacklist.ids[i] for i in np.flatnonzero(mask).tolist()]
+        refs_used[int(k)] = len(ref_ids)
+        if refs.shape[0] == 0:
+            continue
+        # Compare on the ten-residue window: S1, R2 and Y13 never vary.
+        windows = [loops[i][2:12] for i in rows]
+        block = np.frombuffer("".join(windows).encode(), dtype=np.uint8).reshape(-1, 10)
+        scanned = scan(block, refs)
+        n_compared += scanned.n_compared
+        for local, row in enumerate(rows):
+            min_dist[row] = int(scanned.min_distance[local])
+            idx = int(scanned.nearest_index[local])
+            nearest[row] = ref_ids[idx] if idx >= 0 else None
+
+    eligible = min_dist >= cfg.min_dist_to_provided
+    distances = [None if d >= FAR else int(d) for d in min_dist.tolist()]
 
     annotations = pl.DataFrame(
         {
@@ -86,13 +105,14 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
             thresholds={
                 "min_dist_to_provided": cfg.min_dist_to_provided,
                 "blacklist_size": len(blacklist),
+                "references_scanned_per_group": refs_used,
                 "blacklist_skipped_other_length": blacklist.n_skipped,
             },
         ) as rec:
             rec.rows_out = tbl.alive(merged).height
-            saved = live.height * len(blacklist) - result.n_compared
+            saved = live.height * len(blacklist) - n_compared
             rec.notes = (
-                f"{result.n_compared:,} pairs compared; "
+                f"{n_compared:,} pairs compared; "
                 f"pigeonhole skipped {saved:,} provably distant pairs"
             )
     return merged

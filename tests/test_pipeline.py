@@ -233,3 +233,41 @@ def test_predicted_tier_counts_only_evidence() -> None:
         }
     )
     assert df.select(predicted_tier(cfg))[:, 0].to_list() == [3, 1, 0]
+
+
+def test_reference_prune_never_hides_a_collision() -> None:
+    """Pruning by distance-from-native must not miss any near neighbour.
+
+    s04a only compares a candidate against references within
+    ``min_distance - 1`` of its own edit distance. That is sound by the
+    triangle inequality, but a bug there would silently pass designs abguard
+    then rejects, so it is checked against an unpruned brute force.
+    """
+    from her2_stopping_rule.config import CDR3_IMGT
+    from her2_stopping_rule.data import Blacklist
+
+    rng = np.random.default_rng(1)
+    alphabet = np.frombuffer(b"ACDEFGHIKLMNPQRSTVWY", dtype=np.uint8)
+    native = np.frombuffer(CDR3_IMGT[2:12].encode(), dtype=np.uint8)
+
+    refs = alphabet[rng.integers(0, 20, size=(3000, 10))].astype(np.uint8)
+    distances = (refs != native).sum(axis=1).astype(np.int32)
+    blacklist = Blacklist(refs, [f"r{i}" for i in range(len(refs))], distances, 0)
+
+    for k in (3, 4):
+        cands = np.tile(native, (200, 1)).copy()
+        for row in range(cands.shape[0]):
+            for pos in rng.choice(10, size=k, replace=False):
+                cands[row, pos] = alphabet[rng.integers(0, 20)]
+
+        full = (cands[:, None, :] != refs[None, :, :]).sum(axis=2).min(axis=1)
+        kept = blacklist.relevant_to(k, 3)
+        pruned = (
+            (cands[:, None, :] != refs[kept][None, :, :]).sum(axis=2).min(axis=1)
+            if kept.any()
+            else np.full(cands.shape[0], 99)
+        )
+        # Wherever the true nearest neighbour is inside the threshold, the
+        # pruned scan must find it too.
+        close = full < 3
+        assert (pruned[close] == full[close]).all(), k

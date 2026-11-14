@@ -115,16 +115,46 @@ class Blacklist:
     Attributes:
         windows: ``(n, 10)`` uint8 array of mutation windows.
         ids: Human-readable identifier per row, for ``nearest_provided_id``.
+        distances: Each reference's own edit distance from trastuzumab.
         n_skipped: Provided CDR3s of a different length, left to abguard.
     """
 
     windows: np.ndarray
     ids: list[str]
+    distances: np.ndarray
     n_skipped: int
 
     def __len__(self) -> int:
         """Number of comparable CDR3s in the blacklist."""
         return len(self.ids)
+
+    def relevant_to(self, n_mutations: int, min_distance: int) -> np.ndarray:
+        """Select the only references that can possibly be too close.
+
+        Distance from trastuzumab bounds distance between any two sequences:
+        a candidate ``n_mutations`` from the native loop and a reference ``d``
+        from it are at least ``|n_mutations - d|`` apart. So a reference far
+        from trastuzumab cannot be near a candidate that is close to it, and
+        needs no comparison at all.
+
+        For a 3-mutation candidate needing distance 3, only references within
+        5 of trastuzumab can collide: 37,042 of 525,042, a fourteen-fold cut.
+
+        Args:
+            n_mutations: The candidate's distance from trastuzumab.
+            min_distance: The prior-art threshold being enforced.
+
+        Returns:
+            A boolean mask over the blacklist.
+
+        Examples:
+            >>> import numpy as np
+            >>> bl = Blacklist(np.zeros((3, 10), np.uint8), ["a", "b", "c"],
+            ...                np.array([1, 5, 9]), 0)
+            >>> bl.relevant_to(3, 3).tolist()
+            [True, True, False]
+        """
+        return np.abs(self.distances - n_mutations) <= min_distance - 1
 
 
 def load_blacklist(cfg: Config) -> Blacklist:
@@ -159,4 +189,8 @@ def load_blacklist(cfg: Config) -> Blacklist:
     uniq_ids = [seen[w] for w in uniq_windows]
 
     arr = np.frombuffer("".join(uniq_windows).encode(), dtype=np.uint8).reshape(-1, 10)
-    return Blacklist(windows=arr, ids=uniq_ids, n_skipped=n_skipped)
+    native = np.frombuffer(CDR3_IMGT[2:12].encode(), dtype=np.uint8)
+    distances = (arr != native).sum(axis=1).astype(np.int32)
+    return Blacklist(
+        windows=arr, ids=uniq_ids, distances=distances, n_skipped=n_skipped
+    )

@@ -121,18 +121,27 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
     if live.height == 0:
         return df
 
-    labels = cluster_loops(live["cdr3_imgt"].to_list(), cfg.n_clusters)
-    scored = (
-        live.with_columns(
-            pl.Series("cluster", labels, dtype=pl.Int32),
-            composite_score(live, cfg).alias("_score"),
-            predicted_tier(cfg).alias("_tier"),
+    # The two tracks are validated independently and the prize pool is split
+    # evenly between them, so each is ranked on its own merits. Interleaving
+    # into the one submitted list happens in step 13.
+    ranked_parts: list[pl.DataFrame] = []
+    for track in live["track_predicted"].unique(maintain_order=True).to_list():
+        part = live.filter(pl.col("track_predicted") == track)
+        labels = cluster_loops(part["cdr3_imgt"].to_list(), cfg.n_clusters)
+        ranked_parts.append(
+            part.with_columns(
+                pl.Series("cluster", labels, dtype=pl.Int32),
+                composite_score(part, cfg).alias("_score"),
+                predicted_tier(cfg).alias("_tier"),
+            )
+            .sort("_score", descending=True)
+            .with_columns(
+                pl.int_range(pl.len()).over("cluster").alias("_within_cluster")
+            )
+            .sort(["_within_cluster", "_score"], descending=[False, True])
+            .with_row_index("_rank", offset=1)
         )
-        .sort("_score", descending=True)
-        .with_columns(pl.int_range(pl.len()).over("cluster").alias("_within_cluster"))
-        .sort(["_within_cluster", "_score"], descending=[False, True])
-        .with_row_index("_rank", offset=1)
-    )
+    scored = pl.concat(ranked_parts, how="vertical")
 
     reasons = scored.select(
         "design_id",

@@ -39,6 +39,7 @@ from .steps import (
     s04a_novelty,
     s05a_affinity,
     s06a_stability,
+    s06b_denovo,
     s07_fold,
     s08_calibrate,
     s09_epitope,
@@ -64,6 +65,10 @@ STEPS: Final[dict[str, tuple[StepFn, str]]] = {
         s06a_stability.run,
         "build full constructs with framework packages",
     ),
+    "06b_denovo": (
+        s06b_denovo.run,
+        "ProteinMPNN redesigns the framework into the de novo track",
+    ),
     "03b_rfd4": (s03b_rfd4.run, "RFD4-Proteina generates the de novo branch (GPU)"),
     "02_guard": (s02_guard.run, "abguard verdict on every live construct"),
     "07_fold": (
@@ -84,7 +89,11 @@ STEPS: Final[dict[str, tuple[StepFn, str]]] = {
 PATHS: Final[dict[str, tuple[str, ...]]] = {
     "denovo": (
         "01_baseline",
-        "03b_rfd4",
+        "03a_enumerate",
+        "04a_novelty",
+        "05a_affinity",
+        "06a_stability",
+        "06b_denovo",
         "02_guard",
         "07_fold",
         "11_rank",
@@ -97,6 +106,7 @@ PATHS: Final[dict[str, tuple[str, ...]]] = {
         "04a_novelty",
         "05a_affinity",
         "06a_stability",
+        "06b_denovo",
         "03b_rfd4",
         "02_guard",
         "07_fold",
