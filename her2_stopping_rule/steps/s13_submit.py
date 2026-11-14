@@ -173,6 +173,13 @@ def write_outputs(df: pl.DataFrame, cfg: Config) -> dict[str, Path]:
         ).write_csv(path)
         paths[name] = path
 
+    # The organisers want the file named after the team, with exactly the five
+    # columns and nothing else. light_sequence stays filled because every
+    # design is `paired`; it would be left empty for a vhh or scfv.
+    delivery = cfg.results_dir / f"{cfg.team_name.lower()}.csv"
+    s02_guard.write_submission(submission, delivery)
+    paths["delivery"] = delivery
+
     return paths
 
 

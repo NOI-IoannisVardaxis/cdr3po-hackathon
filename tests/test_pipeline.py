@@ -399,3 +399,37 @@ def test_melt_matrix_labels_the_diagonal_as_cognate() -> None:
     scores, labels = melt_matrix(m)
     assert sorted(scores[labels == 1].tolist()) == [0.8, 0.9]
     assert sorted(scores[labels == 0].tolist()) == [0.2, 0.3]
+
+
+def test_delivery_csv_matches_the_organisers_contract() -> None:
+    """Exactly five columns, in order, and nothing else.
+
+    From the organisers: sequence_id, kind, heavy_sequence, light_sequence,
+    design_description. kind is vhh, scfv or paired; light_sequence is filled
+    only for paired, which is what we submit.
+    """
+    from her2_stopping_rule.steps.s02_guard import SUBMISSION_COLUMNS
+
+    assert SUBMISSION_COLUMNS == (
+        "sequence_id",
+        "kind",
+        "heavy_sequence",
+        "light_sequence",
+        "design_description",
+    )
+
+
+def test_constructs_satisfy_the_stated_rejection_rules() -> None:
+    """The rules abguard rejects on, checked on a real construct.
+
+    Anything but the 20 standard amino acids, longer than 250 residues, or an
+    odd number of cysteines.
+    """
+    from her2_stopping_rule.config import AMINO_ACIDS, TRASTUZUMAB_VL
+    from her2_stopping_rule.sequences import splice_heavy_chain, total_length
+
+    heavy = splice_heavy_chain("SRAGGDHFTAMDY")
+    for chain in (heavy, TRASTUZUMAB_VL):
+        assert set(chain) <= set(AMINO_ACIDS), "non-standard residue"
+        assert chain.count("C") % 2 == 0, "odd cysteine count"
+    assert total_length(heavy, TRASTUZUMAB_VL) <= 250

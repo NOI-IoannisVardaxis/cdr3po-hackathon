@@ -81,10 +81,15 @@ def _save(fig: plt.Figure, path: Path) -> Path:
 
 
 def funnel(records: Sequence[tuple[str, int, int, float]], path: Path) -> Path:
-    """Draw how many designs survived each step.
+    """Draw how many designs each step received, kept and rejected.
 
-    A single series, so no legend: the title names it. Counts are direct-labelled
-    because the whole point of the figure is the specific numbers.
+    A waterfall rather than a bar chart of survivors: the interesting quantity
+    is what each filter removed, and on a log scale a bar of survivors hides
+    that a step dropped 93% of its input.
+
+    Two series share one axis, both counts of designs, so no second scale is
+    needed or allowed. Kept is direct-labelled with its count and, where a step
+    removed anything, the share it removed.
 
     Args:
         records: ``(step, rows_in, rows_out, seconds)`` per step, in order.
@@ -93,22 +98,51 @@ def funnel(records: Sequence[tuple[str, int, int, float]], path: Path) -> Path:
     Returns:
         The path written.
     """
-    rows = [(s, out) for s, _, out, _ in records if out > 0]
-    fig, ax = plt.subplots(figsize=(8, max(3.0, 0.42 * len(rows) + 1.2)))
+    rows = [(s, i, o) for s, i, o, _ in records if i > 0 or o > 0]
+    fig, ax = plt.subplots(figsize=(9, max(3.2, 0.52 * len(rows) + 1.3)))
     _style(ax)
 
-    labels = [r[0] for r in rows]
-    values = [r[1] for r in rows]
     positions = np.arange(len(rows))
-    ax.barh(positions, values, height=0.6, color=SERIES[0], zorder=3)
-    ax.set_yticks(positions, labels)
+    kept = [max(o, 1) for _, _, o in rows]
+    dropped = [max(i - o, 0) for _, i, o in rows]
+
+    ax.barh(positions, kept, height=0.58, color=SERIES[0], zorder=3, label="kept")
+    ax.barh(
+        positions,
+        [max(d, 0.9) if d else 0 for d in dropped],
+        height=0.58,
+        left=kept,
+        color=SERIES[1],
+        alpha=0.55,
+        zorder=3,
+        label="rejected by this step",
+    )
+
+    ax.set_yticks(positions, [r[0] for r in rows])
     ax.invert_yaxis()
     ax.set_xscale("log")
-    ax.set_xlabel("designs surviving (log scale)")
-    ax.set_title("Funnel: designs surviving each step", fontsize=12, loc="left")
-    for y, v in zip(positions.tolist(), values):
-        ax.text(v * 1.15, y, f"{v:,}", va="center", fontsize=9, color=TEXT_PRIMARY)
-    ax.set_xlim(right=max(values) * 3)
+    ax.set_xlabel("designs (log scale)")
+    ax.set_title(
+        "Funnel: every rejection is attributable to a step", fontsize=12, loc="left"
+    )
+
+    widest = max(k + d for k, d in zip(kept, dropped))
+    for y, (_, rows_in, rows_out), drop in zip(positions, rows, dropped):
+        share = f"  -{drop / rows_in:.0%}" if rows_in and drop else ""
+        ax.text(
+            (rows_out + drop) * 1.18,
+            y,
+            f"{rows_out:,}{share}",
+            va="center",
+            fontsize=9,
+            color=TEXT_PRIMARY,
+        )
+    # Leave room below the smallest surviving count, or a log axis clips it.
+    ax.set_xlim(left=max(min(kept) * 0.45, 0.8), right=widest * 6)
+
+    legend = ax.legend(frameon=False, fontsize=9, loc="lower right")
+    for text in legend.get_texts():
+        text.set_color(TEXT_SECONDARY)
     return _save(fig, path)
 
 

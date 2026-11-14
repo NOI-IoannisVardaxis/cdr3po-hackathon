@@ -151,6 +151,9 @@ class Config:
     n_clusters: int = 24
 
     # step 13 submit
+    #: Team name. The organisers ask for the submission file to be named
+    #: after the team, e.g. cdr3po.csv.
+    team_name: str = "TEAM"
     n_submit: int = 20
     n_optimisation_ranks: int = 12
 

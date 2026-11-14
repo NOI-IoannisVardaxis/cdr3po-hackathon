@@ -114,3 +114,8 @@ data/raw/
 
 # IDEs
 .idea/
+
+# Derived, binary, and rebuilt in seconds under a fixed seed. Tracked it
+# would conflict on every pull, and git cannot merge it, so resolving the
+# conflict silently discards one side's run.
+results/designs.parquet
