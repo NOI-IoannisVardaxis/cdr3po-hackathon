@@ -1,0 +1,20 @@
+shape: (13, 5)
+┌─────────┬────────────────────────┬──────────┬───────────────┬───────────┐
+│ tag     ┆ name                   ┆ severity ┆ n_occurrences ┆ n_designs │
+│ ---     ┆ ---                    ┆ ---      ┆ ---           ┆ ---       │
+│ str     ┆ str                    ┆ str      ┆ u32           ┆ u32       │
+╞═════════╪════════════════════════╪══════════╪═══════════════╪═══════════╡
+│ Isom    ┆ Isomerization          ┆ high     ┆ 36            ┆ 17        │
+│ DeAmdH  ┆ Deamidation (high)     ┆ high     ┆ 19            ┆ 17        │
+│ mCys    ┆ Missing cysteine       ┆ high     ┆ 16            ┆ 4         │
+│ Ngly    ┆ N-linked glycosylation ┆ high     ┆ 6             ┆ 4         │
+│ FragH   ┆ Fragmentation (high)   ┆ high     ┆ 2             ┆ 2         │
+│ xCys    ┆ Extra cysteine         ┆ high     ┆ 0             ┆ 0         │
+│ TrpOx   ┆ Trp oxidation          ┆ medium   ┆ 37            ┆ 17        │
+│ MetOx   ┆ Met oxidation          ┆ medium   ┆ 27            ┆ 17        │
+│ DeAmdM  ┆ Deamidation (medium)   ┆ medium   ┆ 17            ┆ 17        │
+│ Hydro   ┆ Hydrolysis             ┆ medium   ┆ 0             ┆ 0         │
+│ FragM   ┆ Fragmentation (medium) ┆ medium   ┆ 0             ┆ 0         │
+│ DeAmdL  ┆ Deamidation (low)      ┆ low      ┆ 17            ┆ 17        │
+│ IntBind ┆ Integrin binding       ┆ low      ┆ 0             ┆ 0         │
+└─────────┴────────────────────────┴──────────┴───────────────┴───────────┘

@@ -3,7 +3,8 @@
     "repo_root": "/home/hackathon/irantzu/her2-stopping-rule",
     "seed": 1,
     "edit_distances": [
-      3
+      3,
+      4
     ],
     "min_dist_to_provided": 3,
     "min_cdrh3_mutations_denovo": 2,
@@ -21,6 +22,8 @@
       "boltz2",
       "openfold3"
     ],
+    "msa_dir": "results/msa_out",
+    "min_baseline_iptm": 0.7,
     "n_finalists": 96,
     "iptm_fpr": 0.05,
     "min_iptm_auc": 0.7,
@@ -29,6 +32,7 @@
     "min_epitope_recovery": 0.75,
     "fold_without_template": true,
     "n_clusters": 24,
+    "team_name": "cdr3po",
     "n_submit": 20,
     "n_optimisation_ranks": 12
   },
@@ -141,9 +145,13 @@
         ],
         "seed": 1,
         "fold_without_template": true,
-        "baseline_control": "baseline_trastuzumab"
+        "baseline_control": "baseline_trastuzumab",
+        "baseline_iptm_primary": 0.952,
+        "baseline_iptm_secondary": 0.152,
+        "min_baseline_iptm": 0.7,
+        "spread_usable": false
       },
-      "notes": "boltz2 scored 69, openfold3 scored 0; no spread measured, both models unavailable; baseline control folded: True; no-template control: 69 scored"
+      "notes": "boltz2 scored 69, openfold3 scored 69; no spread measured, both models unavailable; baseline control folded: True; no-template control: 69 scored"
     },
     {
       "step": "08_calibrate",
@@ -164,18 +172,78 @@
     {
       "step": "09_epitope",
       "rows_in": 68,
-      "rows_out": 68,
-      "dropped": 0,
+      "rows_out": 17,
+      "dropped": 51,
       "seconds": 0.0,
       "thresholds": {
         "contact_cutoff_a": 5.0,
-        "epitope_threshold": 0.75,
-        "threshold_basis": "fallback constant 0.75: the trastuzumab control was not folded, so there is nothing to calibrate against",
-        "baseline_self_recovery": null,
+        "epitope_threshold": 0.9,
+        "threshold_basis": "90% of the baseline's own recovery (1.000), measured by the same model in this run",
+        "baseline_self_recovery": 1.0,
         "disulfide_sg_max": 2.5,
         "native_epitope_residues": 7
       },
-      "notes": "0/68 refolds found; 0 disulfides confirmed closed; native epitope 7 HER2 residues at 5.0 A; threshold 0.750 - fallback constant 0.75: the trastuzumab control was not folded, so there is nothing to calibrate against"
+      "notes": "68/68 refolds found; 0 disulfides confirmed closed; native epitope 7 HER2 residues at 5.0 A; threshold 0.900 - 90% of the baseline's own recovery (1.000), measured by the same model in this run"
+    },
+    {
+      "step": "10_express",
+      "rows_in": 17,
+      "rows_out": 17,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "tools_attempted": [
+          "abguard_liability"
+        ],
+        "external_web_services": false,
+        "proteinmpnn_weights": "v_48_020 vanilla; soluble weights unavailable"
+      },
+      "notes": "ran: abguard_liability. Aggrescan 3D, SoluProt and NetSolP skipped: external web services, not enabled. ProteinMPNN soluble weights unavailable on Nebius."
+    },
+    {
+      "step": "11_rank",
+      "rows_in": 17,
+      "rows_out": 17,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "n_clusters": 24
+      },
+      "notes": "4 loop families represented"
+    },
+    {
+      "step": "12_stop",
+      "rows_in": 17,
+      "rows_out": 17,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "spread_threshold": NaN,
+        "basis": "no usable spread: either step 7 did not run, or the second model could not reproduce the baseline complex, so its disagreement measures its own failure rather than our uncertainty. The cap is the submission limit, and this run has no stopping rule."
+      },
+      "notes": "kept 17 of 17; no design fell below the threshold"
+    },
+    {
+      "step": "13_submit",
+      "rows_in": 17,
+      "rows_out": 17,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "n_submit": 20,
+        "n_optimisation_ranks": 12,
+        "refill_passes_used": 1
+      },
+      "notes": "wrote submission.csv with 17 designs after 1 validation pass(es); abguard: compliant"
+    },
+    {
+      "step": "14_report",
+      "rows_in": 706443,
+      "rows_out": 706443,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {},
+      "notes": "wrote report.html with 6 figures"
     }
   ]
 }
