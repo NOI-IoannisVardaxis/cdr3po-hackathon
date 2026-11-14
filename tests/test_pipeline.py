@@ -27,7 +27,7 @@ from her2_stopping_rule.sequences import (
     total_length,
 )
 from her2_stopping_rule.steps.s03a_enumerate import build
-from her2_stopping_rule.steps.s06a_stability import Package, apply_mutations
+from her2_stopping_rule.steps.s06a_optimisation import Package, apply_mutations
 from her2_stopping_rule.steps.s13_submit import order_by_track
 
 # --- sequences ------------------------------------------------------------------
@@ -379,7 +379,7 @@ def test_iptm_is_not_used_as_a_filter_when_it_cannot_discriminate() -> None:
     non-cognate pairs at AUC 0.645, and 94% of measured non-binders clear 0.70.
     Filtering on that is noise dressed as rigour.
     """
-    from her2_stopping_rule.steps.s08_calibrate import calibrate, melt_matrix
+    from her2_stopping_rule.steps.s08_calibrate import calibrate
 
     cfg = Config()
     result = calibrate(cfg)

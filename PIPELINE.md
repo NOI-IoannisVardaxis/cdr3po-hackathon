@@ -70,7 +70,7 @@ config reproduces the same designs; if it does not, that is a bug, not noise.
 | `03a_enumerate` | Every CDR3 at 3 and 4 mutations across IMGT 3–12 | numpy, itertools | constraint, not filter |
 | `04a_novelty` | Prior-art rejection | numpy pigeonhole scan | Hamming ≥ 3 from all 525,063 |
 | `05a_affinity` | FACS surrogate scores and shortlists | scikit-learn | ranking cut, nothing disqualified |
-| `06a_stability` | Loops become paired constructs with framework packages | gemmi geometry | length ≤ 250 |
+| `06a_optimisation` | Loops become paired constructs with framework packages | gemmi geometry | length ≤ 250 |
 | `03b_rfd4` | De novo branch: RFD4-Proteina designs against HER2 (GPU) | Apheris RFD4 image | ≥ 2 CDRH3 mutations from trastuzumab |
 | `07_fold` | Co-fold with two Apheris models, measure their spread (GPU) | Boltz-2, OpenFold3 | none — adds scores |
 | `08_calibrate` | ipTM cutoff from 454 measured non-binders | numpy | admits ≤ target FPR, by construction |

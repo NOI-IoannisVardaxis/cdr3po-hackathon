@@ -209,7 +209,7 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
 
     if funnel is not None:
         with funnel.step(
-            "06a_stability",
+            "06a_optimisation",
             rows_in=live.height,
             thresholds={
                 "packages": [p.name for p in packages],

@@ -170,7 +170,7 @@ def render_html(df: pl.DataFrame, cfg: Config, figures: dict[str, Path]) -> Path
         "03b_rfd4",
         "04a_novelty",
         "05a_affinity",
-        "06a_stability",
+        "06a_optimisation",
         "02_guard",
         "07_fold",
         "08_calibrate",

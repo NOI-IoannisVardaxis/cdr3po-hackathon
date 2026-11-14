@@ -18,7 +18,7 @@ __all__ = [
     "s03b_rfd4",
     "s04a_novelty",
     "s05a_affinity",
-    "s06a_stability",
+    "s06a_optimisation",
     "s07_fold",
     "s08_calibrate",
     "s09_epitope",
