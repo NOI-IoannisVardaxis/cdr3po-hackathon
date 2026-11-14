@@ -37,7 +37,7 @@ ARG VCS_REF
 ARG BUILD_VERSION
 
 LABEL org.opencontainers.image.created=$BUILD_DATE
-LABEL org.opencontainers.image.source="https://github.com/NOI-IoannisVardaxis/her2-stopping-rule"
+LABEL org.opencontainers.image.source="https://github.com/NOI-IoannisVardaxis/cdr3po-hackathon"
 LABEL org.opencontainers.image.revision=$VCS_REF
 LABEL org.opencontainers.image.version=$BUILD_VERSION
 

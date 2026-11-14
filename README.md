@@ -2,7 +2,7 @@
   <img src="docs/cdr3po_logo.png" alt="cdr3po" width="260">
 </p>
 
-<h1 align="center">her2-stopping-rule</h1>
+<h1 align="center">cdr3po · the HER2 stopping rule</h1>
 
 <p align="center">
   <b>A calibrated funnel for antibody design.</b><br>
@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  Team <b>cdr3po</b> · AI × Antibodies Hackathon, Oslo, 14 November 2026
+  AI × Antibodies Hackathon, Oslo, 14 November 2026
 </p>
 
 ---
@@ -40,8 +40,8 @@ rather than chosen, and every rejected design can be traced to the step that rej
 ## Quickstart
 
 ```bash
-git clone git@github.com:NOI-IoannisVardaxis/her2-stopping-rule.git
-cd her2-stopping-rule
+git clone git@github.com:NOI-IoannisVardaxis/cdr3po-hackathon.git
+cd cdr3po-hackathon
 
 make dev                                   # virtualenv + dependencies, via uv
 uv run her2 steps                          # list the 14 steps
