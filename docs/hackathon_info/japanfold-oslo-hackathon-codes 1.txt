@@ -1,0 +1,11 @@
+JapanFold credit for the Oslo AI x Antibodies Hackathon
+
+One code per team, each worth $1,000 of JapanFold compute. A code works once and never expires, so teams can keep using the credit after the hackathon.
+
+How to redeem:
+1. Go to japanfold.aiand.com and click "Sign in" (email sign-in, no card; every new account also gets $100 to start).
+2. On the Account page, paste the code into "Have a code?" and click Redeem.
+3. The $1,000 shows up in the balance right away. Redeem it on the account the team will run its jobs from.
+
+Code:
+JF-FMS5-52SG-E5S3-4WQ0
