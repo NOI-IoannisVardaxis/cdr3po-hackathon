@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "artifact": {
+        "artifact_id": "ed20c45a-cc99-5c16-9ec4-0dc47eea47e6",
+        "compression": "none",
+        "media_type": "application/x-tar",
+        "sha256": "1a609cd136f6bf8bf7f5edd22423338a3c7369403fff57ca9a3416c91da19133",
+        "size_bytes": 2621440
+      },
+      "name": "workload",
+      "semantic_type": "inverse-folding-tar/v1"
+    }
+  ],
+  "manifest_id": "oslo-esm-if1-esmif-stability-2",
+  "schema": "fs2-serve.nebius.ai/scientific-artifact-manifest/v1"
+}

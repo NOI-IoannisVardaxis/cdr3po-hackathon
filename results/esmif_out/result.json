@@ -1,0 +1,443 @@
+{
+ "schema": "fs2-serve.nebius.ai/scientific-run-result/v2",
+ "operation_id": "op-84286212d3f836f9",
+ "model_id": "esm-if1",
+ "status": "succeeded",
+ "terminal_status": "succeeded",
+ "input_manifest": {
+  "artifact_id": "16b78786-cc80-5e45-b72a-5d0d6347a733",
+  "compression": "none",
+  "media_type": "application/vnd.fs2.scientific-manifest+json",
+  "sha256": "5ec0e28b233a1622e748de2541435f171b16ac1857c1613ff2965d487a736979",
+  "size_bytes": 509
+ },
+ "output_manifest": {
+  "artifact_id": "c864b450-b12f-5ea3-b093-1a31952d8b4c",
+  "sha256": "3664dfa19cccf3b0688ff3a205ea36871eef9d927cc9cf3a265c4b616f226fd7",
+  "size_bytes": 5630,
+  "media_type": "application/vnd.fs2.scientific-manifest+json",
+  "compression": "none"
+ },
+ "semantic_validation": {
+  "status": "passed",
+  "validator_id": "inverse-fold-v1",
+  "structures_completed": 18,
+  "residues_scored": 4086
+ },
+ "native_result": {
+  "validation": {
+   "status": "passed",
+   "validator_id": "inverse-fold-v1",
+   "structures_completed": 18,
+   "residues_scored": 4086
+  },
+  "files": [
+   {
+    "name": "result",
+    "semantic_type": "inverse-fold-result/v1",
+    "media_type": "application/json",
+    "compression": null,
+    "file": {
+     "path": "result.json",
+     "sha256": "1250b78db1c7b93420670dd8020a3d4c21b2f68b1db2b460b327c55742c0a163",
+     "size_bytes": 16037
+    }
+   },
+   {
+    "name": "native-00000",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/baseline_trastuzumab_AB.csv",
+     "sha256": "2fd6ab80dfd1cd93ea54d551576253a38f086a8a22686c70c609b78938324306",
+     "size_bytes": 43642
+    }
+   },
+   {
+    "name": "native-00001",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/dn_opt_d3_SRHGGDGKGAMDY__native_m45_AB.csv",
+     "sha256": "05e8b623d37b11fd646db27ea8c101ed46e15f01d5682b98d7c39f35eb4c904e",
+     "size_bytes": 43201
+    }
+   },
+   {
+    "name": "native-00002",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/dn_opt_d3_SRWDGDGNGAMDY__native_m54_AB.csv",
+     "sha256": "839fb47f5caa5f8c04ccd90449435fea145dbfb48bde22561c4bc7f2ad8b0ae2",
+     "size_bytes": 43446
+    }
+   },
+   {
+    "name": "native-00003",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/dn_opt_d3_SRWGGDGAGRMDY__native_m50_AB.csv",
+     "sha256": "ed685fa910057208a29e6167fc2f959897df3ab924578e215ae8b92a5a71a22a",
+     "size_bytes": 43413
+    }
+   },
+   {
+    "name": "native-00004",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/dn_opt_d3_SRWVGDPFGAMDY__native_m14_AB.csv",
+     "sha256": "23df942414cddc4793cd3393cc9c19073c727d7dd95f9f8090363311da50c19a",
+     "size_bytes": 43417
+    }
+   },
+   {
+    "name": "native-00005",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/plain",
+    "compression": null,
+    "file": {
+     "path": "native/log.txt",
+     "sha256": "0192e7a86ce444f19e2e01fe54defbd3e54307176d8c3aaf232bdcfcf629b1bb",
+     "size_bytes": 5257
+    }
+   },
+   {
+    "name": "native-00006",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/opt_d3_SREGGDGMWAMDY__native_AB.csv",
+     "sha256": "7241e8438a245374218dde25893a793d636675a97274a7ff92e6b3f14678fb81",
+     "size_bytes": 43700
+    }
+   },
+   {
+    "name": "native-00007",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/opt_d3_SRHGGDGAMAMDY__native_AB.csv",
+     "sha256": "0b9c94bc197d7a0d38821bdc4c3318b979f16d9b10252f8d915a0626de298ad2",
+     "size_bytes": 43655
+    }
+   },
+   {
+    "name": "native-00008",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/opt_d3_SRHGGDGAPAMDY__native_AB.csv",
+     "sha256": "7c7ba656be3eac57292e73640b309fc10ef208736819bfb7fe04d3dd988c37ad",
+     "size_bytes": 43581
+    }
+   },
+   {
+    "name": "native-00009",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/opt_d3_SRHGGDGAQAMDY__native_AB.csv",
+     "sha256": "0acdb00fdfc3e788deaca0b33af1246300617ae0b1cc200e859ce8980769417a",
+     "size_bytes": 43559
+    }
+   },
+   {
+    "name": "native-00010",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/opt_d3_SRNGGDGWPAMDY__native_AB.csv",
+     "sha256": "4b72a6151089677ecc703060ffd566a93eca825b9f45838e545ad82a024f9c5c",
+     "size_bytes": 43588
+    }
+   },
+   {
+    "name": "native-00011",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/opt_d3_SRWDGDGAMAMDY__native_AB.csv",
+     "sha256": "fd3712a5b691beb0c1abc389ea51e7bc208556aa34f1daa5a53211e15e656c9f",
+     "size_bytes": 43574
+    }
+   },
+   {
+    "name": "native-00012",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/opt_d3_SRWDGDGDPAMDY__native_AB.csv",
+     "sha256": "a2187378766cd3b3a041f13dbe9ad5e8d66258fd53f6f398fc137dcbd545bd16",
+     "size_bytes": 43552
+    }
+   },
+   {
+    "name": "native-00013",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/opt_d3_SRWGGDGMWIMDY__native_AB.csv",
+     "sha256": "f23c7bc11ea589bfe89f0889eaf57621ed4a867c8d9f66ff2170e3365f1a5994",
+     "size_bytes": 43525
+    }
+   },
+   {
+    "name": "native-00014",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/opt_d3_SRWGGDGMWMMDY__native_AB.csv",
+     "sha256": "b4010cb6cb7fcf6d4fdd2e1d8d07bbada61d84de7f796f1ab069e418cba64be0",
+     "size_bytes": 43533
+    }
+   },
+   {
+    "name": "native-00015",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/opt_d3_SRWGGDGMWNMDY__native_AB.csv",
+     "sha256": "dd6b38fa43e76312193cd7977f07a81d9cfc0bc1c3c91f61bcb8a60159b4e09c",
+     "size_bytes": 43554
+    }
+   },
+   {
+    "name": "native-00016",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/opt_d3_SRWGGDGMWQMDY__native_AB.csv",
+     "sha256": "b31ce38b614349a3873c3edb9f66a8fbaf96ec4d7a3354d51ff09b651ed90664",
+     "size_bytes": 43575
+    }
+   },
+   {
+    "name": "native-00017",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/opt_d3_SRWGGDGMWRMDY__native_AB.csv",
+     "sha256": "bc2adb952b8f3af8e8de19d86aa3bdca3094434926549c055b7b41121dbe4890",
+     "size_bytes": 43592
+    }
+   },
+   {
+    "name": "native-00018",
+    "semantic_type": "inverse-fold-native-file/v1",
+    "media_type": "text/csv",
+    "compression": null,
+    "file": {
+     "path": "native/opt_d3_SRWGGDGMWWMDY__native_AB.csv",
+     "sha256": "ba3b258e07b23ff7a48df2cfaff9f5210e20a60b187bc2c3a81e6c747fe5a0c1",
+     "size_bytes": 43594
+    }
+   }
+  ],
+  "command_seconds": 19.466931307688355,
+  "command_timing_scope": "terminal-stage-only",
+  "runtime_metrics": {
+   "native_command_seconds": 11.27130641322583,
+   "backend": "cuda"
+  }
+ },
+ "customer_storage": {
+  "available": true,
+  "bucket": "fs2-oslo-hackathon-participant-02-b32bf38a8a",
+  "prefix": "runs/esm-if1/op-84286212d3f836f9/",
+  "manifest_key": "runs/esm-if1/op-84286212d3f836f9/manifest.json",
+  "files": [
+   {
+    "path": "artifacts/result.json",
+    "sha256": "1250b78db1c7b93420670dd8020a3d4c21b2f68b1db2b460b327c55742c0a163",
+    "size_bytes": 16037,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/result.json"
+   },
+   {
+    "path": "artifacts/native/baseline_trastuzumab_AB.csv",
+    "sha256": "2fd6ab80dfd1cd93ea54d551576253a38f086a8a22686c70c609b78938324306",
+    "size_bytes": 43642,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/baseline_trastuzumab_AB.csv"
+   },
+   {
+    "path": "artifacts/native/dn_opt_d3_SRHGGDGKGAMDY__native_m45_AB.csv",
+    "sha256": "05e8b623d37b11fd646db27ea8c101ed46e15f01d5682b98d7c39f35eb4c904e",
+    "size_bytes": 43201,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/dn_opt_d3_SRHGGDGKGAMDY__native_m45_AB.csv"
+   },
+   {
+    "path": "artifacts/native/dn_opt_d3_SRWDGDGNGAMDY__native_m54_AB.csv",
+    "sha256": "839fb47f5caa5f8c04ccd90449435fea145dbfb48bde22561c4bc7f2ad8b0ae2",
+    "size_bytes": 43446,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/dn_opt_d3_SRWDGDGNGAMDY__native_m54_AB.csv"
+   },
+   {
+    "path": "artifacts/native/dn_opt_d3_SRWGGDGAGRMDY__native_m50_AB.csv",
+    "sha256": "ed685fa910057208a29e6167fc2f959897df3ab924578e215ae8b92a5a71a22a",
+    "size_bytes": 43413,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/dn_opt_d3_SRWGGDGAGRMDY__native_m50_AB.csv"
+   },
+   {
+    "path": "artifacts/native/dn_opt_d3_SRWVGDPFGAMDY__native_m14_AB.csv",
+    "sha256": "23df942414cddc4793cd3393cc9c19073c727d7dd95f9f8090363311da50c19a",
+    "size_bytes": 43417,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/dn_opt_d3_SRWVGDPFGAMDY__native_m14_AB.csv"
+   },
+   {
+    "path": "artifacts/native/log.txt",
+    "sha256": "0192e7a86ce444f19e2e01fe54defbd3e54307176d8c3aaf232bdcfcf629b1bb",
+    "size_bytes": 5257,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/log.txt"
+   },
+   {
+    "path": "artifacts/native/opt_d3_SREGGDGMWAMDY__native_AB.csv",
+    "sha256": "7241e8438a245374218dde25893a793d636675a97274a7ff92e6b3f14678fb81",
+    "size_bytes": 43700,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/opt_d3_SREGGDGMWAMDY__native_AB.csv"
+   },
+   {
+    "path": "artifacts/native/opt_d3_SRHGGDGAMAMDY__native_AB.csv",
+    "sha256": "0b9c94bc197d7a0d38821bdc4c3318b979f16d9b10252f8d915a0626de298ad2",
+    "size_bytes": 43655,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/opt_d3_SRHGGDGAMAMDY__native_AB.csv"
+   },
+   {
+    "path": "artifacts/native/opt_d3_SRHGGDGAPAMDY__native_AB.csv",
+    "sha256": "7c7ba656be3eac57292e73640b309fc10ef208736819bfb7fe04d3dd988c37ad",
+    "size_bytes": 43581,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/opt_d3_SRHGGDGAPAMDY__native_AB.csv"
+   },
+   {
+    "path": "artifacts/native/opt_d3_SRHGGDGAQAMDY__native_AB.csv",
+    "sha256": "0acdb00fdfc3e788deaca0b33af1246300617ae0b1cc200e859ce8980769417a",
+    "size_bytes": 43559,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/opt_d3_SRHGGDGAQAMDY__native_AB.csv"
+   },
+   {
+    "path": "artifacts/native/opt_d3_SRNGGDGWPAMDY__native_AB.csv",
+    "sha256": "4b72a6151089677ecc703060ffd566a93eca825b9f45838e545ad82a024f9c5c",
+    "size_bytes": 43588,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/opt_d3_SRNGGDGWPAMDY__native_AB.csv"
+   },
+   {
+    "path": "artifacts/native/opt_d3_SRWDGDGAMAMDY__native_AB.csv",
+    "sha256": "fd3712a5b691beb0c1abc389ea51e7bc208556aa34f1daa5a53211e15e656c9f",
+    "size_bytes": 43574,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/opt_d3_SRWDGDGAMAMDY__native_AB.csv"
+   },
+   {
+    "path": "artifacts/native/opt_d3_SRWDGDGDPAMDY__native_AB.csv",
+    "sha256": "a2187378766cd3b3a041f13dbe9ad5e8d66258fd53f6f398fc137dcbd545bd16",
+    "size_bytes": 43552,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/opt_d3_SRWDGDGDPAMDY__native_AB.csv"
+   },
+   {
+    "path": "artifacts/native/opt_d3_SRWGGDGMWIMDY__native_AB.csv",
+    "sha256": "f23c7bc11ea589bfe89f0889eaf57621ed4a867c8d9f66ff2170e3365f1a5994",
+    "size_bytes": 43525,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/opt_d3_SRWGGDGMWIMDY__native_AB.csv"
+   },
+   {
+    "path": "artifacts/native/opt_d3_SRWGGDGMWMMDY__native_AB.csv",
+    "sha256": "b4010cb6cb7fcf6d4fdd2e1d8d07bbada61d84de7f796f1ab069e418cba64be0",
+    "size_bytes": 43533,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/opt_d3_SRWGGDGMWMMDY__native_AB.csv"
+   },
+   {
+    "path": "artifacts/native/opt_d3_SRWGGDGMWNMDY__native_AB.csv",
+    "sha256": "dd6b38fa43e76312193cd7977f07a81d9cfc0bc1c3c91f61bcb8a60159b4e09c",
+    "size_bytes": 43554,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/opt_d3_SRWGGDGMWNMDY__native_AB.csv"
+   },
+   {
+    "path": "artifacts/native/opt_d3_SRWGGDGMWQMDY__native_AB.csv",
+    "sha256": "b31ce38b614349a3873c3edb9f66a8fbaf96ec4d7a3354d51ff09b651ed90664",
+    "size_bytes": 43575,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/opt_d3_SRWGGDGMWQMDY__native_AB.csv"
+   },
+   {
+    "path": "artifacts/native/opt_d3_SRWGGDGMWRMDY__native_AB.csv",
+    "sha256": "bc2adb952b8f3af8e8de19d86aa3bdca3094434926549c055b7b41121dbe4890",
+    "size_bytes": 43592,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/opt_d3_SRWGGDGMWRMDY__native_AB.csv"
+   },
+   {
+    "path": "artifacts/native/opt_d3_SRWGGDGMWWMDY__native_AB.csv",
+    "sha256": "ba3b258e07b23ff7a48df2cfaff9f5210e20a60b187bc2c3a81e6c747fe5a0c1",
+    "size_bytes": 43594,
+    "key": "runs/esm-if1/op-84286212d3f836f9/artifacts/native/opt_d3_SRWGGDGMWWMDY__native_AB.csv"
+   },
+   {
+    "path": "result.json",
+    "sha256": "a06fa56e920d559ba96156e9817f90ec6f35b9599b04bc6470719ed03fa9d0c4",
+    "size_bytes": 5612,
+    "key": "runs/esm-if1/op-84286212d3f836f9/result.json"
+   }
+  ]
+ },
+ "progress": {
+  "schema": "scientific-ai/progress/v1",
+  "updated_at": null,
+  "current_step_id": null,
+  "steps": [
+   {
+    "step_id": "delivered_calls",
+    "command": null,
+    "state": "completed",
+    "unit": "call",
+    "initial_step": null,
+    "target_step": null,
+    "observed_step": null,
+    "durable_step": null,
+    "timestep_ps": null,
+    "completed_ns": null,
+    "durable_completed_ns": null,
+    "target_ns": null,
+    "ns_per_day": null,
+    "ns_per_day_source": null,
+    "completed_units": 1.0,
+    "durable_completed_units": 1.0,
+    "target_units": null,
+    "rate": null,
+    "rate_unit": null,
+    "rate_source": null,
+    "rate_window_seconds": null,
+    "observed_at": null,
+    "durable_at": null,
+    "rate_updated_at": null
+   }
+  ],
+  "available": true,
+  "stale": false,
+  "stale_after_seconds": null,
+  "source": "verified-delivery"
+ },
+ "execution": {
+  "stage_id": "inverse-fold",
+  "shard_id": "main",
+  "role": "run",
+  "owner": {
+   "tenant_id": "oslo-hackathon",
+   "principal_id": "f0de903d67e1640a3b25f4318845393f381dc414b6af1abe573a404b4da0e560"
+  }
+ }
+}

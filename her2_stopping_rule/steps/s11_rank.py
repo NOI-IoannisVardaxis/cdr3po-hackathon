@@ -107,9 +107,20 @@ def predicted_tier(cfg: Config) -> pl.Expr:
         .fill_null(False)
         .cast(pl.Int32)
     )
-    # Thermostability has no predictor, so the evidence is structural: an
-    # engineered disulfide confirmed closed in the refold.
-    stability = pl.col("disulfide_formed").fill_null(False).cast(pl.Int32)
+    # Thermostability. The engineered disulfide was the original evidence and
+    # cannot be submitted -- abguard reads an inter-chain pair as two unpaired
+    # cysteines -- so that term is null for every design and left alone would
+    # cap every tier at 2 of 3, making S-tier arithmetically unreachable.
+    #
+    # The replacement is ESM-IF1's inverse-folding likelihood: how well a
+    # sequence fits the backbone it is supposed to fold into. That is a
+    # recognised stability proxy and emphatically not a melting temperature.
+    # The bar is trastuzumab's own score, from the same model on the same
+    # backbone in the same run, so a design counts only by beating the
+    # molecule it is trying to improve.
+    stability = (pl.col("esm_if_vs_baseline") > 0).fill_null(False).cast(pl.Int32)
+    disulfide = pl.col("disulfide_formed").fill_null(False).cast(pl.Int32)
+    stability = (stability + disulfide).clip(0, 1)
     return affinity + epitope + stability
 
 

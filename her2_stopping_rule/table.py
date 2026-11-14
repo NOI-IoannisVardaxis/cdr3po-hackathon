@@ -51,6 +51,8 @@ SCHEMA: Final[dict[str, Any]] = {
     "contact_cutoff_a": pl.Float64,
     "disulfide_sg_distance": pl.Float64,
     "disulfide_formed": pl.Boolean,
+    "esm_if_score": pl.Float64,
+    "esm_if_vs_baseline": pl.Float64,
     # step 10 express
     "express_tools_run": pl.Utf8,
     "liability_flags": pl.Utf8,

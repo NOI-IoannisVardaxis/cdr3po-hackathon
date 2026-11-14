@@ -28,6 +28,7 @@ from her2_stopping_rule.sequences import (
 )
 from her2_stopping_rule.steps.s03a_enumerate import build
 from her2_stopping_rule.steps.s06a_optimisation import Package, apply_mutations
+from her2_stopping_rule.steps.s11_rank import predicted_tier
 from her2_stopping_rule.steps.s13_submit import order_by_track
 
 # --- sequences ------------------------------------------------------------------
@@ -231,10 +232,32 @@ def test_predicted_tier_counts_only_evidence() -> None:
         {
             "p_high": [0.995, 0.995, None],
             "epitope_recovery": [0.9, None, None],
-            "disulfide_formed": [True, None, None],
+            "esm_if_vs_baseline": [0.01, None, None],
+            "disulfide_formed": [None, None, None],
         }
     )
     assert df.select(predicted_tier(cfg))[:, 0].to_list() == [3, 1, 0]
+
+
+def test_stability_axis_is_reachable() -> None:
+    """S-tier must be arithmetically possible.
+
+    The axis used to read disulfide_formed, and the disulfide is
+    unsubmittable -- abguard reads an inter-chain pair as two unpaired
+    cysteines -- so that term was null for every design and no design could
+    exceed 2 of 3. It now reads the inverse-folding score against the
+    baseline, which designs can actually beat.
+    """
+    cfg = Config()
+    df = pl.DataFrame(
+        {
+            "p_high": [0.995],
+            "epitope_recovery": [1.0],
+            "esm_if_vs_baseline": [0.05],
+            "disulfide_formed": [None],
+        }
+    )
+    assert df.select(predicted_tier(cfg))[:, 0].to_list() == [3]
 
 
 def test_affinity_threshold_is_not_a_coin_flip() -> None:

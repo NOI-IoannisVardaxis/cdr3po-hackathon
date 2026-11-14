@@ -1,0 +1,44 @@
+[2026-11-14 16:03:34,433] Running inverse folding on PDB/CIFs ...
+[2026-11-14 16:03:34,433] WARNING: Heavy/light chains not specified for PDB/CIF files in folder /work/stage-ec2fe7739fca15a40e4dfb57/inputs. Assuming 1st chain heavy, 2nd chain light.
+[2026-11-14 16:03:34,433] WARNING: Specify manually with --pdbs_csv CSV file
+[2026-11-14 16:03:34,775] NOTE: Loading ESM-IF1 weights instead of fine-tuned AntiFold weights
+[2026-11-14 16:03:36,980] Loaded model to cuda.
+[2026-11-14 16:03:36,986] NOTE: Custom chain mode enabled. Will run specified chain(s).
+[2026-11-14 16:03:36,986] Reading in (18) PDBs from DataFrame
+[2026-11-14 16:03:37,174] Predicting batch 1/18: PDBs 1-1 out of 18 total
+[2026-11-14 16:03:38,236] Predicting batch 2/18: PDBs 2-2 out of 18 total
+[2026-11-14 16:03:38,280] Predicting batch 3/18: PDBs 3-3 out of 18 total
+[2026-11-14 16:03:38,327] Predicting batch 4/18: PDBs 4-4 out of 18 total
+[2026-11-14 16:03:38,373] Predicting batch 5/18: PDBs 5-5 out of 18 total
+[2026-11-14 16:03:38,419] Predicting batch 6/18: PDBs 6-6 out of 18 total
+[2026-11-14 16:03:38,461] Predicting batch 7/18: PDBs 7-7 out of 18 total
+[2026-11-14 16:03:38,505] Predicting batch 8/18: PDBs 8-8 out of 18 total
+[2026-11-14 16:03:38,555] Predicting batch 9/18: PDBs 9-9 out of 18 total
+[2026-11-14 16:03:38,601] Predicting batch 10/18: PDBs 10-10 out of 18 total
+[2026-11-14 16:03:38,642] Predicting batch 11/18: PDBs 11-11 out of 18 total
+[2026-11-14 16:03:38,686] Predicting batch 12/18: PDBs 12-12 out of 18 total
+[2026-11-14 16:03:38,734] Predicting batch 13/18: PDBs 13-13 out of 18 total
+[2026-11-14 16:03:38,776] Predicting batch 14/18: PDBs 14-14 out of 18 total
+[2026-11-14 16:03:38,818] Predicting batch 15/18: PDBs 15-15 out of 18 total
+[2026-11-14 16:03:38,861] Predicting batch 16/18: PDBs 16-16 out of 18 total
+[2026-11-14 16:03:38,907] Predicting batch 17/18: PDBs 17-17 out of 18 total
+[2026-11-14 16:03:38,948] Predicting batch 18/18: PDBs 18-18 out of 18 total
+[2026-11-14 16:03:39,810] Saving 18 CSVs to /work/stage-ec2fe7739fca15a40e4dfb57/native
+[2026-11-14 16:03:39,817] Writing dn_opt_d3_SRWVGDPFGAMDY__native_m14_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/dn_opt_d3_SRWVGDPFGAMDY__native_m14_AB.csv
+[2026-11-14 16:03:39,829] Writing opt_d3_SRWGGDGMWRMDY__native_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/opt_d3_SRWGGDGMWRMDY__native_AB.csv
+[2026-11-14 16:03:39,837] Writing opt_d3_SRWDGDGAMAMDY__native_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/opt_d3_SRWDGDGAMAMDY__native_AB.csv
+[2026-11-14 16:03:39,846] Writing opt_d3_SRWGGDGMWMMDY__native_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/opt_d3_SRWGGDGMWMMDY__native_AB.csv
+[2026-11-14 16:03:39,854] Writing opt_d3_SREGGDGMWAMDY__native_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/opt_d3_SREGGDGMWAMDY__native_AB.csv
+[2026-11-14 16:03:39,863] Writing baseline_trastuzumab_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/baseline_trastuzumab_AB.csv
+[2026-11-14 16:03:39,871] Writing opt_d3_SRNGGDGWPAMDY__native_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/opt_d3_SRNGGDGWPAMDY__native_AB.csv
+[2026-11-14 16:03:39,880] Writing opt_d3_SRWDGDGDPAMDY__native_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/opt_d3_SRWDGDGDPAMDY__native_AB.csv
+[2026-11-14 16:03:39,888] Writing opt_d3_SRHGGDGAMAMDY__native_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/opt_d3_SRHGGDGAMAMDY__native_AB.csv
+[2026-11-14 16:03:39,897] Writing dn_opt_d3_SRWDGDGNGAMDY__native_m54_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/dn_opt_d3_SRWDGDGNGAMDY__native_m54_AB.csv
+[2026-11-14 16:03:39,905] Writing opt_d3_SRHGGDGAQAMDY__native_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/opt_d3_SRHGGDGAQAMDY__native_AB.csv
+[2026-11-14 16:03:39,913] Writing opt_d3_SRWGGDGMWWMDY__native_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/opt_d3_SRWGGDGMWWMDY__native_AB.csv
+[2026-11-14 16:03:39,922] Writing opt_d3_SRHGGDGAPAMDY__native_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/opt_d3_SRHGGDGAPAMDY__native_AB.csv
+[2026-11-14 16:03:39,943] Writing opt_d3_SRWGGDGMWIMDY__native_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/opt_d3_SRWGGDGMWIMDY__native_AB.csv
+[2026-11-14 16:03:39,952] Writing dn_opt_d3_SRWGGDGAGRMDY__native_m50_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/dn_opt_d3_SRWGGDGAGRMDY__native_m50_AB.csv
+[2026-11-14 16:03:39,960] Writing dn_opt_d3_SRHGGDGKGAMDY__native_m45_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/dn_opt_d3_SRHGGDGKGAMDY__native_m45_AB.csv
+[2026-11-14 16:03:39,969] Writing opt_d3_SRWGGDGMWQMDY__native_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/opt_d3_SRWGGDGMWQMDY__native_AB.csv
+[2026-11-14 16:03:39,977] Writing opt_d3_SRWGGDGMWNMDY__native_AB per-residue log probs CSV to /work/stage-ec2fe7739fca15a40e4dfb57/native/opt_d3_SRWGGDGMWNMDY__native_AB.csv

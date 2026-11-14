@@ -1,0 +1,12 @@
+{
+ "label": "esmif-stability-1",
+ "model": "esm-if1",
+ "tool": "submit_esm_if1",
+ "key": "oslo-esm-if1-esmif-stability-1",
+ "kind": "file",
+ "operation": "inverse-fold",
+ "submitted_at": 1794672009.1899054,
+ "operation_id": "op-5bd48d6a25b55012",
+ "state": "failed",
+ "total_seconds": 102
+}

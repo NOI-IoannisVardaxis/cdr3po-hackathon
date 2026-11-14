@@ -201,6 +201,20 @@
       "notes": "ran: abguard_liability. Aggrescan 3D, SoluProt and NetSolP skipped: external web services, not enabled. ProteinMPNN soluble weights unavailable on Nebius."
     },
     {
+      "step": "10b_stability",
+      "rows_in": 17,
+      "rows_out": 17,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "model": "esm-if1",
+        "baseline_log_likelihood": -1.057053303964758,
+        "bar": "beat the baseline's own score, same model same run",
+        "is_melting_temperature": false
+      },
+      "notes": "17 designs scored; 3 beat the baseline log-likelihood of -1.0571. A rank, not a Tm."
+    },
+    {
       "step": "11_rank",
       "rows_in": 17,
       "rows_out": 17,
