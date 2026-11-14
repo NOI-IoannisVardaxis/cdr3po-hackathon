@@ -17,7 +17,7 @@ series colours, and a legend whenever two or more series share a plot.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, Final
 
@@ -127,7 +127,7 @@ def funnel(records: Sequence[tuple[str, int, int, float]], path: Path) -> Path:
     )
 
     widest = max(k + d for k, d in zip(kept, dropped))
-    for y, (_, rows_in, rows_out), drop in zip(positions, rows, dropped):
+    for y, (_, rows_in, rows_out), drop in zip(positions.tolist(), rows, dropped):
         share = f"  -{drop / rows_in:.0%}" if rows_in and drop else ""
         ax.text(
             (rows_out + drop) * 1.18,
@@ -476,4 +476,169 @@ def disulfide_geometry(sites: Sequence[dict[str, Any]], path: Path) -> Path:
         legend = ax.legend(frameon=False, fontsize=9, loc="lower right")
         for text in legend.get_texts():
             text.set_color(TEXT_SECONDARY)
+    return _save(fig, path)
+
+
+def funnel_pyramid(
+    shared: Sequence[tuple[str, int]],
+    tracks: Mapping[str, Sequence[tuple[str, int]]],
+    path: Path,
+) -> Path:
+    """Draw the funnel as a narrowing pyramid that forks into the two tracks.
+
+    The two tracks are not separate pipelines. Enumeration, prior-art filtering
+    and affinity ranking are shared, and only the framework treatment differs,
+    so the figure is one stem that splits rather than two funnels side by side:
+    drawing them separately would imply the loops were selected twice.
+
+    Band width is proportional to log count, because the first stage is five
+    orders of magnitude wider than the last and a linear funnel would render
+    everything after the first band as a line.
+
+    Args:
+        shared: ``(label, surviving)`` for each shared step, in order.
+        tracks: Per track, ``(label, surviving)`` for each step after the fork.
+        path: Destination PNG.
+
+    Returns:
+        The path written.
+    """
+
+    def width(count: int, widest: float, scale: float) -> float:
+        return scale * (np.log10(max(count, 1)) + 1) / (np.log10(max(widest, 1)) + 1)
+
+    widest = max([c for _, c in shared] or [1])
+    band, gap = 0.62, 0.20
+    n_rows = len(shared) + max((len(v) for v in tracks.values()), default=0)
+    fig, ax = plt.subplots(figsize=(9.6, max(4.2, 0.72 * n_rows + 1.4)))
+    ax.set_facecolor(SURFACE)
+    ax.axis("off")
+
+    y = 0.0
+    for i, (label, count) in enumerate(shared):
+        top = width(count, widest, 1.0)
+        nxt = shared[i + 1][1] if i + 1 < len(shared) else count
+        bottom = width(nxt, widest, 1.0)
+        ax.add_patch(
+            plt.Polygon(
+                [
+                    (-top / 2, y),
+                    (top / 2, y),
+                    (bottom / 2, y - band),
+                    (-bottom / 2, y - band),
+                ],
+                closed=True,
+                facecolor=SERIES[0],
+                edgecolor=SURFACE,
+                linewidth=2,
+                zorder=3,
+            )
+        )
+        ax.text(
+            0,
+            y - band / 2,
+            f"{count:,}",
+            ha="center",
+            va="center",
+            fontsize=12,
+            weight="bold",
+            color="#ffffff",
+            zorder=4,
+        )
+        ax.text(
+            -top / 2 - 0.03,
+            y - band / 2,
+            label,
+            ha="right",
+            va="center",
+            fontsize=10.5,
+            color=TEXT_SECONDARY,
+            zorder=4,
+        )
+        y -= band + gap
+
+    ax.text(
+        0,
+        y + 0.04,
+        "the two tracks differ only in framework treatment",
+        ha="center",
+        va="bottom",
+        fontsize=9.5,
+        style="italic",
+        color=TEXT_SECONDARY,
+    )
+    y -= 0.78
+
+    offsets = (-0.62, 0.62)
+    colours = (SERIES[0], SERIES[1])
+    # One scale across both branches, so a wider band always means more
+    # designs. Scaling each branch to its own maximum would draw 27 as wide
+    # as 96 and invite exactly the wrong comparison.
+    branch_widest = max([c for steps in tracks.values() for _, c in steps] or [1])
+    for (name, steps), x0, colour in zip(sorted(tracks.items()), offsets, colours):
+        yy = y
+        ax.text(
+            x0,
+            yy + 0.10,
+            name,
+            ha="center",
+            va="bottom",
+            fontsize=12.5,
+            weight="bold",
+            color=TEXT_PRIMARY,
+        )
+        yy -= 0.10
+        for i, (label, count) in enumerate(steps):
+            top = width(count, branch_widest, 0.74)
+            nxt = steps[i + 1][1] if i + 1 < len(steps) else count
+            bottom = width(nxt, branch_widest, 0.74)
+            ax.add_patch(
+                plt.Polygon(
+                    [
+                        (x0 - top / 2, yy),
+                        (x0 + top / 2, yy),
+                        (x0 + bottom / 2, yy - band),
+                        (x0 - bottom / 2, yy - band),
+                    ],
+                    closed=True,
+                    facecolor=colour,
+                    edgecolor=SURFACE,
+                    linewidth=2,
+                    zorder=3,
+                )
+            )
+            ax.text(
+                x0,
+                yy - band / 2,
+                f"{count:,}",
+                ha="center",
+                va="center",
+                fontsize=11.5,
+                weight="bold",
+                color="#ffffff",
+                zorder=4,
+            )
+            ax.text(
+                x0 + top / 2 + 0.03,
+                yy - band / 2,
+                label,
+                ha="left",
+                va="center",
+                fontsize=10,
+                color=TEXT_SECONDARY,
+                zorder=4,
+            )
+            yy -= band + gap
+
+    ax.set_xlim(-1.75, 1.75)
+    ax.set_ylim(
+        y - (band + gap) * (max((len(v) for v in tracks.values()), default=0) + 1), 0.55
+    )
+    ax.set_title(
+        "From every possible loop to the submitted slate",
+        fontsize=13,
+        loc="left",
+        color=TEXT_PRIMARY,
+        x=0.02,
+    )
     return _save(fig, path)

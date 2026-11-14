@@ -153,7 +153,7 @@ class Config:
     # step 13 submit
     #: Team name. The organisers ask for the submission file to be named
     #: after the team, e.g. cdr3po.csv.
-    team_name: str = "TEAM"
+    team_name: str = "cdr3po"
     n_submit: int = 20
     n_optimisation_ranks: int = 12
 

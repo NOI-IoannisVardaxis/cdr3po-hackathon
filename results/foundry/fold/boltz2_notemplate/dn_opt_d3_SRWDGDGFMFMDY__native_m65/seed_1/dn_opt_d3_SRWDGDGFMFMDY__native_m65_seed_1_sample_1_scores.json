@@ -1,0 +1,21 @@
+{
+    "average_predicted_local_distance_difference_test": 89.109,
+    "global_predicted_distance_error": 0.729,
+    "predicted_tm_score": 0.721,
+    "interface_predicted_tm_score": 0.597,
+    "chain_predicted_tm_score": [
+        0.985, 0.981, 0.915, 0.931
+    ],
+    "chain_chain_interface_predicted_tm_score": [
+        [1.0, 0.952, 0.16, 0.146],
+        [0.951, 1.0, 0.164, 0.15],
+        [0.213, 0.215, 1.0, 0.681],
+        [0.197, 0.197, 0.837, 1.0]
+    ],
+    "model_ranking_score": 0.832,
+    "num_atoms": 2576,
+    "num_bonds": 332,
+    "num_residues": 336,
+    "num_chains": 4,
+    "num_tokens": 336
+}

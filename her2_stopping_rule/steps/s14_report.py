@@ -79,6 +79,42 @@ def build_figures(df: pl.DataFrame, cfg: Config) -> dict[str, Path]:
         ]
         figures["funnel"] = plots.funnel(records, out / "funnel.png")
 
+    # Pyramid funnel: shared stem, then one branch per track.
+    from .. import table as tbl0
+
+    shared_steps = [
+        ("enumerate", "03a_enumerate"),
+        ("prior art", "04a_novelty"),
+        ("affinity", "05a_affinity"),
+    ]
+    by_step = {s["step"]: s for s in steps}
+    shared = [
+        (label, by_step[key]["rows_out"])
+        for label, key in shared_steps
+        if key in by_step
+    ]
+    per_track: dict[str, list[tuple[str, int]]] = {}
+    for track, name in (("optimisation", "optimisation"), ("de_novo", "de novo")):
+        rows = df.filter(pl.col("track_predicted") == track)
+        if rows.height == 0:
+            continue
+        built = rows.height
+        passed_guard = rows.filter(
+            pl.col("dropped_by").is_null() | (pl.col("dropped_by") != "guard")
+        ).height
+        survived = tbl0.alive(rows).height
+        submitted = tbl0.alive(rows).filter(pl.col("rank").is_not_null()).height
+        per_track[name] = [
+            ("constructs", built),
+            ("abguard", passed_guard),
+            ("survived", survived),
+            ("submitted", max(submitted, 0)),
+        ]
+    if shared and per_track:
+        figures["pyramid"] = plots.funnel_pyramid(
+            shared, per_track, out / "funnel_pyramid.png"
+        )
+
     distances = [d for d, _, _ in DISTANCE_CURVE]
     figures["distance_tradeoff"] = plots.distance_tradeoff(
         distances,
