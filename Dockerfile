@@ -36,10 +36,10 @@ ARG BUILD_DATE
 ARG VCS_REF
 ARG BUILD_VERSION
 
-LABEL com.oncoimmunity.build-date=$BUILD_DATE
-LABEL com.oncoimmunity.vcs-url="https://github.com/OncoImmunity/her2_stopping_rule"
-LABEL com.oncoimmunity.vcs-ref=$VCS_REF
-LABEL com.oncoimmunity.version=$BUILD_VERSION
+LABEL org.opencontainers.image.created=$BUILD_DATE
+LABEL org.opencontainers.image.source="https://github.com/NOI-IoannisVardaxis/her2-stopping-rule"
+LABEL org.opencontainers.image.revision=$VCS_REF
+LABEL org.opencontainers.image.version=$BUILD_VERSION
 
 COPY --from=build $VIRTUAL_ENV $VIRTUAL_ENV
 

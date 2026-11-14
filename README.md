@@ -19,8 +19,8 @@ See also [installing uv]
 Clone the [repository][repo] & install the dependencies.
 
 ```bash
-git clone git@github.com:OncoImmunity/her2_stopping_rule.git
-cd her2_stopping_rule
+git clone git@github.com:NOI-IoannisVardaxis/her2-stopping-rule.git
+cd her2-stopping-rule
 # Setup python virtualenv & dependencies
 make dev
 # Run tests
@@ -41,7 +41,7 @@ make wheel
 
 Using `uv run` to execute python [scripts] ensures that dependencies are managed declaratively without manually managing python environments. `uv run` always ensures that the dependencies specified in the `pyproject.toml` file in your current working directory are installed before running.
 
-[repo]: https://github.com/OncoImmunity/her2_stopping_rule
+[repo]: https://github.com/NOI-IoannisVardaxis/her2-stopping-rule
 [docker]: https://docs.docker.com/docker-for-mac/install/
 [uv]: https://github.com/astral-sh/uv
 [tools]: https://docs.astral.sh/uv/guides/tools/
