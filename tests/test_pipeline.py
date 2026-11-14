@@ -151,6 +151,8 @@ def test_order_by_track_puts_optimisation_first() -> None:
             "design_id": ["dn1", "op1", "op2"],
             "track_predicted": ["de_novo", "optimisation", "optimisation"],
             "rank": [1, 2, 3],
+            "heavy_sequence": ["EVQL"] * 3,
+            "light_sequence": ["DIQM"] * 3,
         }
     )
     assert order_by_track(df, Config())["design_id"].to_list() == ["op1", "op2", "dn1"]
@@ -284,3 +286,39 @@ def test_conform_casts_to_the_schema_type() -> None:
     assert tbl.conform(loose)["n_mutations"].dtype == pl.Int32
     # The real failure: concatenating a loose frame onto a conformed one.
     pl.concat([tbl.conform(tbl.empty()), tbl.conform(loose)], how="vertical")
+
+
+def test_guard_catches_file_level_errors() -> None:
+    """A repeated heavy/light pair must reject every design it names.
+
+    abguard reports this against the file, on one line, with no [rule] prefix.
+    A guard that only parses per-design errors passes a file abguard rejects.
+    """
+    from her2_stopping_rule.steps.s02_guard import parse_errors
+
+    err = (
+        "  - repeated heavy/light pair for sequence_id: aa, bb, cc\n"
+        "  - [novelty] dd: CDRH3 X is 2 mutation(s) from Y in "
+        "uspto:uspto_WIO11640; a novel design needs at least 3"
+    )
+    verdicts = parse_errors(err)
+    assert set(verdicts) == {"aa", "bb", "cc", "dd"}
+    assert not any(v.compliant for v in verdicts.values())
+    # abguard screens patents too, which no local filter can replicate.
+    assert verdicts["dd"].nearest_source == "uspto"
+
+
+def test_only_real_constructs_are_submittable() -> None:
+    """Rows without both chains never reach the submission."""
+    from her2_stopping_rule.steps.s13_submit import order_by_track
+
+    df = pl.DataFrame(
+        {
+            "design_id": ["loop", "real"],
+            "track_predicted": ["optimisation", "optimisation"],
+            "rank": [1, 2],
+            "heavy_sequence": [None, "EVQL"],
+            "light_sequence": [None, "DIQM"],
+        }
+    )
+    assert order_by_track(df, Config())["design_id"].to_list() == ["real"]

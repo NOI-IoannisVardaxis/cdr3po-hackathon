@@ -45,6 +45,13 @@ SUBMISSION_COLUMNS = (
 _ERROR_RE = re.compile(
     r"\[(?P<rule>\w+)\]\s+(?P<sid>[\w.\-]+):\s+(?P<message>.*?)(?:$)", re.MULTILINE
 )
+#: Errors abguard reports against the file rather than one design, such as a
+#: repeated heavy/light pair. These name several ids on one line and have no
+#: [rule] prefix, so they need their own pattern or the guard passes a file
+#: abguard will reject.
+_FILE_ERROR_RE = re.compile(
+    r"^\s*-\s+(?P<message>repeated [^:]+):\s*(?P<ids>.+)$", re.MULTILINE
+)
 _NEAREST_RE = re.compile(
     r"is (?P<dist>\d+) mutation\(s\) from (?P<seq>[A-Z]+) in (?P<source>[\w.\-]+)"
 )
@@ -164,6 +171,13 @@ def parse_errors(stderr: str) -> dict[str, Verdict]:
         {}
     """
     verdicts: dict[str, Verdict] = {}
+    for match in _FILE_ERROR_RE.finditer(stderr):
+        message = match.group("message").strip()
+        for sid in (s.strip() for s in match.group("ids").split(",")):
+            if sid:
+                verdicts[sid] = Verdict(
+                    sequence_id=sid, compliant=False, rule="schema", message=message
+                )
     for match in _ERROR_RE.finditer(stderr):
         sid = match.group("sid")
         message = match.group("message").strip()

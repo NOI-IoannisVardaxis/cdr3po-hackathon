@@ -52,12 +52,28 @@ def order_by_track(df: pl.DataFrame, cfg: Config) -> pl.DataFrame:
         ...     "design_id": ["a", "b", "c"],
         ...     "track_predicted": ["de_novo", "optimisation", "optimisation"],
         ...     "rank": [1, 2, 3],
+        ...     "heavy_sequence": ["EVQL"] * 3,
+        ...     "light_sequence": ["DIQM"] * 3,
         ... })
         >>> order_by_track(df, Config())["design_id"].to_list()
         ['b', 'c', 'a']
     """
-    optimisation = df.filter(pl.col("track_predicted") == "optimisation").sort("rank")
-    de_novo = df.filter(pl.col("track_predicted") != "optimisation").sort("rank")
+    from .. import table as tbl
+
+    # Only real constructs can be submitted. A row without both chains is an
+    # intermediate that some step failed to retire, and empty sequences reach
+    # abguard as duplicates rather than as the missing data they are.
+    submittable = tbl.conform(df).filter(
+        pl.col("heavy_sequence").is_not_null()
+        & pl.col("light_sequence").is_not_null()
+        & (pl.col("heavy_sequence").str.len_chars() > 0)
+    )
+    optimisation = submittable.filter(pl.col("track_predicted") == "optimisation").sort(
+        "rank"
+    )
+    de_novo = submittable.filter(pl.col("track_predicted") != "optimisation").sort(
+        "rank"
+    )
     keep_opt = optimisation.head(cfg.n_optimisation_ranks)
     remaining = cfg.n_submit - keep_opt.height
     filler = de_novo.head(max(remaining, 0))

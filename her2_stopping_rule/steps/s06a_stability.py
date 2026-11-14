@@ -190,10 +190,18 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
             )
 
     constructs = pl.DataFrame(rows) if rows else tbl.empty()
-    expanded = tbl.drop(
-        df, pl.col("design_id").is_in(loops["design_id"].to_list()), "stability"
+
+    # Every loop that reached this step is now retired, whether or not it was
+    # expanded. A loop is not a design: it has no heavy or light chain, so a
+    # loop left alive would reach the submission with empty sequences, where
+    # abguard reports them as a repeated heavy/light pair rather than as the
+    # missing data they are.
+    retired = tbl.drop(
+        df,
+        pl.col("design_id").is_in(live["design_id"].to_list()),
+        "stability",
     )
-    out = pl.concat([tbl.conform(expanded), tbl.conform(constructs)], how="vertical")
+    out = pl.concat([tbl.conform(retired), tbl.conform(constructs)], how="vertical")
 
     if funnel is not None:
         with funnel.step(

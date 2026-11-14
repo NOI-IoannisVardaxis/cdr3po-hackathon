@@ -24,7 +24,9 @@
     "n_finalists": 48,
     "iptm_fpr": 0.05,
     "contact_cutoff_a": 5.0,
+    "epitope_recovery_fraction": 0.9,
     "min_epitope_recovery": 0.75,
+    "fold_without_template": true,
     "n_clusters": 24,
     "n_submit": 20,
     "n_optimisation_ranks": 12
@@ -55,41 +57,6 @@
         "native_cdr3": "SRWGGDGFYAMDY"
       },
       "notes": "823,080 loops in the complete space; 116,760 removed for unpaired cysteine"
-    },
-    {
-      "step": "04a_novelty",
-      "rows_in": 706320,
-      "rows_out": 46808,
-      "dropped": 659512,
-      "seconds": 0.0,
-      "thresholds": {
-        "min_dist_to_provided": 3,
-        "blacklist_size": 525042,
-        "references_scanned_per_group": {
-          "3": 37258
-        },
-        "blacklist_skipped_other_length": 28
-      },
-      "notes": "4,037,480,786 pairs compared; pigeonhole skipped 366,810,184,654 provably distant pairs"
-    },
-    {
-      "step": "05a_affinity",
-      "rows_in": 46808,
-      "rows_out": 400,
-      "dropped": 46408,
-      "seconds": 0.0,
-      "thresholds": {
-        "shortlist_n": 400,
-        "holdout_distance": 4,
-        "holdout_roc_auc": 0.9221,
-        "holdout_base_rate": 0.7459,
-        "precision_at": {
-          "50": 1.0,
-          "100": 1.0,
-          "500": 1.0
-        }
-      },
-      "notes": "held out distance 4 entirely: ROC-AUC 0.922 against a 74.6% base rate"
     }
   ]
 }
