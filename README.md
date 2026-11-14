@@ -1,425 +1,319 @@
-# her2 stopping rule
+<p align="center">
+  <img src="docs/cdr3po_logo.png" alt="cdr3po" width="260">
+</p>
 
-Multi-objective antibody design pipeline for trastuzumab/HER2: affinity, epitope preservation and thermostability, with calibrated filters and an explicit stopping rule.
+<h1 align="center">her2-stopping-rule</h1>
 
-Built at the **AI × Antibodies Hackathon, Oslo, 14 November 2026**.
+<p align="center">
+  <b>A calibrated funnel for antibody design.</b><br>
+  Trastuzumab → 823,080 candidates → <b>17 designs we can defend</b>, one rejection reason at a time.
+</p>
+
+<p align="center">
+  Team <b>cdr3po</b> · AI × Antibodies Hackathon, Oslo, 14 November 2026
+</p>
 
 ---
 
-## The brief, in one page
+## What this is
 
-Improve trastuzumab, a clinical antibody against HER2. Adaptyv expresses our designs and
-measures three properties against a measured trastuzumab baseline:
+The challenge was to improve **trastuzumab**, a clinical antibody against HER2, on three
+axes at once — binding affinity, epitope preservation and thermostability — and submit a
+ranked list of designs for wet-lab testing.
 
-| Property | Measured by | Beat the baseline? |
-| --- | --- | --- |
-| Binding to HER2 | SPR (KD) | comparable or better |
-| Epitope preservation | competitive binding vs trastuzumab | preserved |
-| Thermostability | direct measurement | improved |
+Generating candidates is easy. **Deciding which ones to believe is the hard part**, and that
+is what this repo is: a 14-step pipeline where every threshold is derived from a measurement
+rather than chosen, and every rejected design can be traced to the step that rejected it.
 
-**A design is tiered by how many of the three it improves.** S-tier is 3 of 3, A-tier 2, B-tier 1.
-Teams rank by S-tier count first, then A-tier. *Ten designs that each improve one property lose to
-two that improve all three.* This single sentence should drive every cut we make.
-
-### Two tracks, decided for us
-
-`abguard` classifies each design; we do not choose the track. It is never reclassified — miss your
-track's rule and the design is rejected.
-
-The track follows from one number, **identity of the whole Fv to trastuzumab**:
-
-- **≥ 70% identity → `novel`** (the optimisation track): an engineered trastuzumab variant.
-- **< 70% identity → `de_novo`**: a molecule of its own.
-
-Prizes are split evenly across the two tracks, so a track with fewer entrants is worth more per design.
-
-### Hard filters, all designs
-
-Format VHH, scFv or Fab · no unpaired cysteines · immunum numbering confidence ≥ 0.1 ·
-total length ≤ 250 aa.
-
-### The novelty rule, settled
-
-Read from `abguard`'s source (`novelty.py`, `config.py`), not from the prose. The task PDF and the
-Apheris playbook state this inconsistently and **both are misleading**; the code is the arbiter:
+> **The headline:** of 823,080 possible CDR3 variants, **17** survive. For each of the other
+> 823,063 we can name the gate that killed it and the measurement that set that gate.
 
 | | |
 | --- | --- |
-| What is compared | the **IMGT CDRH3**, Levenshtein distance |
+| **Deliverable** | [`results2/cdr3po.csv`](results2/cdr3po.csv) — 17 designs, 13 optimisation + 4 de novo |
+| **Compliance** | 17 / 17 pass the organisers' `abguard team-validate`, first pass |
+| **Tiering** | 3 designs clear all three axes; 14 clear two |
+| **Full audit trail** | [`results2/funnel.json`](results2/funnel.json) — every count beside the threshold that produced it |
+
+---
+
+## Quickstart
+
+```bash
+git clone git@github.com:NOI-IoannisVardaxis/her2-stopping-rule.git
+cd her2-stopping-rule
+
+make dev                                   # virtualenv + dependencies, via uv
+uv run her2 steps                          # list the 14 steps
+uv run her2 config                         # print every threshold currently in force
+
+uv run her2 run --path optimisation        # the CPU path, end to end — no GPU, no network
+```
+
+Want to see it work in under a minute?
+
+```bash
+uv run her2 run --path optimisation --edit-distances 3 --shortlist-n 40
+```
+
+Every run is **deterministic** under `--seed` (default `1`). Same config, same designs. If it
+differs, that is a bug, not noise.
+
+Two things the pipeline needs that are **not** in this public repo — the organisers' data
+tables and the `abguard` wheel. [PIPELINE.md](PIPELINE.md) has the setup, the full step table,
+and what each threshold means.
+
+---
+
+## The funnel
+
+<p align="center">
+  <img src="results2/figures/funnel_pyramid.png" alt="The filtering funnel, 823,080 candidates down to 17 designs" width="640">
+</p>
+
+| Stage | In | Out | What happened |
+| --- | ---: | ---: | --- |
+| `03a_enumerate` | — | **706,320** | All 823,080 CDR3s at distance 3 across IMGT 3–12; 116,760 dropped for an unpaired cysteine |
+| `04a_novelty` | 706,320 | **46,808** | **Prior art removes 93%.** 4.0 B pairs compared; a pigeonhole bound skipped 366.8 B as provably distant |
+| `05a_affinity` | 46,808 | **400** | FACS surrogate ranking cut (ROC-AUC 0.922 on a held-out stratum) |
+| `06a_optimisation` | 400 | **96** | Loops become full paired constructs, ≤ 250 aa |
+| `06b_denovo` | 96 | **123** | ProteinMPNN framework redesign adds 27 de novo candidates |
+| `07_fold` → `08_calibrate` | 68 | **68** | Co-folded with Boltz-2 and OpenFold3. **ipTM computed but deliberately not used as a filter** — see finding 2 |
+| `09_epitope` | 68 | **17** | **The second big cut.** Contact recovery ≥ 0.900, where 0.900 is 90% of what the same model recovers on trastuzumab itself |
+| `10b_stability` | 17 | 17 | ESM-IF1 log-likelihood vs the baseline's −1.0571; 3 designs beat it |
+| `12_stop` | 17 | 17 | The stopping rule **declined to fire** — see finding 3 |
+| `13_submit` | 17 | **17** | `abguard`: compliant |
+
+**Two gates do essentially all the work:** prior art (93%) and the epitope check (75% of what
+was left). Everything else is ranking.
+
+---
+
+## Four findings
+
+These are the reason the funnel looks the way it does. Each one overturned the obvious move.
+
+### 1 · A surrogate score of 0.5 is not "better than trastuzumab"
+
+We never predict K<sub>D</sub>. The FACS surrogate answers *"is this a high binder"*, where
+"high" is defined against the **variant population** — not against the parent antibody. Treating
+`p_high > 0.5` as "improves on trastuzumab" is simply the wrong question.
+
+So we calibrated it against the 187 SPR rows that have both a measured K<sub>D</sub> and a
+comparable CDR3:
+
+| Cutoff | Designs kept | Beat the 0.152 nM baseline | Precision |
+| --- | ---: | ---: | ---: |
+| 0.50 | 164 | 12 | **7.3%** |
+| 0.90 | 110 | 12 | 10.9% |
+| **0.99** | **30** | **12** | **40.0%** |
+
+Base rate is **6.4%**. The obvious threshold is the base rate with extra steps; the strict one
+is a **six-fold enrichment**. The surrogate's AUC *for the actually-judged question* is 0.857 —
+the signal was there all along, and the round number was throwing it away.
+
+### 2 · ipTM cannot separate binders from non-binders here
+
+Everyone filters on ipTM. We calibrated it against 8,190 pairs that were **measured** not to bind.
+
+- **AUC 0.645** — barely above chance.
+- **94.3%** of measured non-binders score above 0.70.
+- **81.7%** score above 0.80, the round number most pipelines use.
+- Holding a 5% false-positive rate needs a cutoff of **0.9514**, which discards 82% of true binders.
+
+So `08_calibrate` computes the cutoff and then **refuses to filter on it**. Dropping designs on a
+metric this weak is noise dressed up as rigour. ipTM survives as a weak tie-break; the FACS
+surrogate does the real work.
+
+### 3 · The stopping rule declined to fire, and that is the finding
+
+The rule needs a noise floor, which means two independent folding models that agree about reality.
+On the trastuzumab baseline — **a solved crystal structure** — we measured:
+
+| Model | Baseline ipTM |
+| --- | ---: |
+| Boltz-2 | **0.952** |
+| Protenix v2 | 0.439 |
+| OpenFold3 | 0.152 *(0.315 with a 7,875-sequence MSA)* |
+
+Disagreement with a model that cannot reproduce a known answer measures **that model's failure**,
+not our uncertainty. The rule therefore reports that it has nothing to measure rather than
+inventing a threshold, and kept 17 of 17.
+
+### 4 · The best designs are the most likely to be patented
+
+Every rejection at the final gate was a **USPTO patent** hit — roughly half our top designs.
+That is structural, not bad luck: the best loops sit nearest trastuzumab, which is the most
+patent-encumbered region of the space. **The better a design scores, the likelier it is already
+claimed.**
+
+A team filtering only against the two provided data tables submits patent-colliding designs and
+never finds out. `abguard` screens prior art we do not hold, which is why it runs on real
+constructs throughout the pipeline, not just at the end.
+
+### Bonus · Mutate the HER2 contacts, do not freeze them
+
+The intuitive move is to protect the CDRH3 residues that touch HER2 and spend the mutation budget
+elsewhere. **The data says the opposite:** contact-intact designs are **67.5%** high binders,
+designs that mutate a contact are **81.9%**.
+
+The reading: the novelty rule *forces* a mutation budget to be spent somewhere, and spending it on
+contacts protects the functionally sensitive positions — which turn out not to be the ones touching
+the antigen. Contacts sit at IMGT 3, 7, 8, 9 at a 5.0 Å cutoff.
+
+---
+
+## The designs
+
+Top three, all of which clear all three axes:
+
+| Rank | IMGT CDRH3 | Mutations | P(high) |
+| ---: | --- | --- | ---: |
+| 1 | `SREGGDGMWAMDY` | W3E, F8M, Y9W | 0.995 |
+| 2 | `SRNGGDGWPAMDY` | W3N, F8W, Y9P | 0.995 |
+| 3 | `SRWGGDGMWMMDY` | F8M, Y9W, A10M | 0.994 |
+
+Trastuzumab is `SRWGGDGFYAMDY`. Note that positions 8 and 9 are HER2 contacts — deliberately so.
+
+| File | Contents |
+| --- | --- |
+| [`results2/cdr3po.csv`](results2/cdr3po.csv) | The deliverable: the six columns `abguard` accepts |
+| [`results2/submission_annotated.csv`](results2/submission_annotated.csv) | The same designs with track, mutations and the reason each was ranked where it was |
+| [`results2/shortlist.csv`](results2/shortlist.csv) | Every scored design, with `dropped_by` naming its rejecting step |
+| [`results2/funnel.json`](results2/funnel.json) | Counts, thresholds and timings per step |
+| [`results2/report.html`](results2/report.html) | Figures, generated by `14_report` |
+
+---
+
+## How it works
+
+Fourteen steps, each a pure function over `results/designs.parquet`: read the table, add the
+columns you own, write it back.
+
+**Steps never delete rows.** A design that fails a filter gets `dropped_by` set to the step that
+rejected it, and stays. Three things follow:
+
+1. The funnel counts are a **query**, not a reconstruction.
+2. Any step **re-runs** without breaking the ones after it.
+3. **Every rejection is answerable** — which is the whole point.
+
+The two tracks differ only in mutation scope. Confine changes to CDR3 and Fv identity stays near
+98%, so `abguard` classifies the design as *optimisation*; redesign the framework and identity falls
+below 0.70, where it classifies as *de novo*. We measured the boundary: **60 framework mutations
+gives 0.740 identity and stays optimisation, 80 gives 0.648 and flips.**
+
+The de novo branch is not a binder from scratch. ProteinMPNN inverse-folds the trastuzumab backbone
+keeping all six CDRs, so the paratope geometry survives and the loop is already ranked against
+524,346 measured variants.
+
+**→ [PIPELINE.md](PIPELINE.md)** for the step-by-step table, the configuration reference and the
+setup the pipeline needs. **→ [GLOSSARY.md](GLOSSARY.md)** for the terminology.
+
+---
+
+## What we do not claim
+
+Stated plainly, because a judge who finds these first scores them far worse.
+
+- **Thermostability is a rank, not a T<sub>m</sub>.** ESM-IF1 log-likelihood against the baseline.
+  The organisers' own guide rates computational substitutes for melting temperature as *"Moderate"*
+  reliability. We do not claim better.
+- **14 of 17 designs are tier 2 of 3.** Three clear all three axes. We report the tier each design
+  earned, not the one we hoped for.
+- **The stopping rule never fired.** It kept 17 of 17, because no second model could define the
+  noise floor. That is finding 3, not an omission.
+- **Only 4 loop families are represented.** Hierarchical clustering takes the best per cluster, but
+  the space surviving both gates is genuinely narrow.
+- **The designed disulfide was unsubmittable.** Geometry was sound at 4.11 Å (ALA106-H / ALA34-L),
+  but `abguard` reads an inter-chain pair as two unpaired cysteines. 48 of 48 rejected.
+- **The affinity surrogate is validated at distance 4 but applied at distance 3.** The production
+  model does train on distance-3 data, so this is a conservative estimate rather than a leak.
+
+---
+
+## The rules, as the code actually implements them
+
+The task PDF and the participant playbook state the novelty rule inconsistently and **both are
+misleading.** These values are read from `abguard`'s source and confirmed by probing the installed
+build.
+
+| | |
+| --- | --- |
+| What is compared | the **IMGT CDRH3**, by Levenshtein distance |
 | Trastuzumab's IMGT CDRH3 | **`SRWGGDGFYAMDY`** (13-mer) |
-| `novel` needs | **≥ 3** mutations |
+| `novel` (optimisation) needs | **≥ 3** mutations |
 | `de_novo` needs | **≥ 2** mutations |
 | Measured against | trastuzumab **and every CDRH3 in the reference** — 610,109 loops |
-
-Two traps worth stating plainly:
-
-- **The 70% is on the whole Fv and only picks the track.** It is not a pass/fail, and it is not
-  CDRH3 identity, whatever the PDF says.
-- **Use the IMGT 13-mer, never the 10-mer core `WGGDGFYAMD`** the assay tables use. abguard
-  re-derives every reference loop to IMGT precisely because comparing against the cores "would hand
-  every design three free mutations from the flanks alone".
-
-The binding constraint is prior art, not trastuzumab. A loop can sit 3 mutations from trastuzumab and
-still be rejected for landing 2 from something in the FACS screen — which is exactly what happened to
-one of our first two designs.
-
-### Submission and scoring
-
-- A ranked list of **up to 20 designs**. Everyone gets 4 tested; pitch placement and judge
-  nominations add up to 16.
-- Pitch: **40% judgment** (why these molecules), 20% execution (reproducible repo), 20% user fit,
-  20% path to value.
-
-Judgment is the largest single weight, and it is exactly what this repo is for.
-
----
-
-## Our thesis
-
-Everyone will generate hundreds of candidates. Almost nobody can defend the cut from 400 down to 20.
-**Our product is the funnel, not the generator** — and the agent stops when the next predicted gain
-falls below the spread between our scoring sources, and says so.
-
-Two observations that shape the plan:
-
-1. **Nothing on offer optimises thermostability.** The fine-tuned HER2 weights were trained on a
-   binding screen. Affinity is where every team will crowd; thermostability is a scored axis with no
-   provided model, and epitope preservation is nearly free if we keep the trastuzumab framework and
-   only move CDRH3. An optimisation-track design that holds affinity and wins on thermostability is a
-   cheaper S-tier than a de novo binder that has to win all three from scratch.
-2. **Folding confidence is known to be unreliable here, and we were handed the proof.** The
-   Smorodina data has 11,342 non-binding pairs that models still score confidently. Calibrating our
-   ipTM/ipSAE cutoff on measured non-binders — instead of picking 0.8 because it is a round number —
-   is both a better filter and the most defensible slide in the pitch.
-
----
-
-## Plan for the day
-
-Six steps. Parallelise: design on the VM's H100, score on Nebius, keep the slow jobs moving.
-
-| # | Step | Where | Output |
-| --- | --- | --- | --- |
-| 1 | Baseline: fold trastuzumab + HER2 (1N8Z), record its scores under every metric we will use | VM | the number every design is compared to |
-| 2 | Calibrate the confidence filter on measured non-binders | VM, CPU | a cutoff with a stated false-positive rate |
-| 3 | Generate CDRH3 variants: HER2 novel + exploratory (optimisation), antibody weight (de novo) | VM, GPU | a few hundred designs |
-| 4 | Filter: `abguard`, then novelty, then liabilities and expression proxies | VM | the survivors |
-| 5 | Score: refold against HER2 with two independent models, **OpenFold3 (Apheris) + Boltz-2**; predict affinity and thermostability | VM + Nebius | one row per design |
-| 6 | Rank, stop, and write down why | here | 20 designs with reasons |
-
-### TODO
-
-**Blockers — settle these first**
-
-- [x] `abguard` — installed and verified, see [abguard](#abguard). Novelty thresholds read from its
-      source, so there is nothing to ask the organisers.
-- [x] Build confirmed: the **11 Nov wheel, the one with the novelty gate**, is the correct one.
-- [ ] `foundry-toolkit login` — no stored credential, so `module list` and `module describe` fail.
-      Probably not blocking: every image is already pulled, and `docker run` needs no login.
-- [ ] Decide the track split. Recommendation: weight optimisation heavily, keep a few de novo VHHs as
-      a lottery ticket, since the prize pots are equal and de novo will likely be thinner.
-
-**Setup on the VM** (`~/ioannis/her2-stopping-rule`)
-
-Most of the stack is already installed — see [What is on the VM](#what-is-on-the-vm).
-
-- [x] `aws s3 sync s3://apheris-oslo-hackathon/rfd4-proteina/docs/ ~/rfd4` — docs, `Data/`, `Settings/`
-      and `Scripts/run-her2.sh`, the 4-design smoke test.
-- [x] HER2 tables (6 MB) in `data/raw/her2-trastuzumab/`. **Note:** `data/raw/` is the git-ignored path,
-      not `data/` as the Apheris docs suggest. Keep organiser data out of this public repo.
-- [x] Smoke test green — see [the smoke test](#the-smoke-test-14-nov-0955).
-- [ ] `uv pip install torch` if we train our own affinity or thermostability model (step 5).
-      `torch.cuda.is_available()` must print `True` before anything else.
-- [x] Nebius installed — see [Nebius](#nebius). 51 skills plus the client, 34 callable models.
-- [x] JapanFold redeemed and working — see [JapanFold](#japanfold). Balance $1,100.
-- [ ] AMASS ($100) — deferred, it is a pitch tool and contributes nothing to the pipeline.
-
-**Pipeline**
-
-- [ ] Step 1 baseline. Everything is relative to trastuzumab; without this number no claim is checkable.
-- [ ] Step 2 calibration — the differentiator. Use `sigma2-ab-ag-champloo/` per-replica PAE and the
-      SPR supplementary tables. **Calibrate ipSAE computed from PAE, not bare ipTM** — it is what the
-      Smorodina study and Adaptyv both use. Note: "no reportable fit" is **not** a true negative;
-      only the 454 measured non-binders are.
-- [ ] Step 3 generation. Start RFD4 jobs early, they are the long pole. `her2-novel-2026-11-09` passes
-      novelty 86% of the time with the lowest interface error (6.8 Å) — start there, add
-      `her2-2026-11-07 --sequence-tsr-k 1` for variety.
-- [ ] Step 4 filters, including the expression proxies Adaptyv recommends: Aggrescan 3D, SoluProt,
-      NetSolP, ProteinMPNN soluble weights. A design that does not express scores zero on all three axes.
-- [ ] Step 5a affinity: train on the SPR table (190 KDs) and the FACS classes; rank, do not trust absolutely.
-- [ ] Step 5b thermostability: **no model exists in our stack** — not on the VM, not on Nebius.
-      `stab-ddg` is binding ddG, not thermal stability. Decide the approach: a folding-ddG or Tm
-      predictor installed ourselves, or framework choice plus disulfide and liability inspection.
-      **The most under-served axis, and the one nothing we have will solve for us.**
-- [ ] Step 5c epitope: co-fold each design with HER2, check the CDRH3 contacts the 1N8Z epitope.
-- [ ] Step 6 the stopping rule itself, written as code with its threshold derived from step 2.
-- [ ] Ranked list of 20, each with a one-line reason and its run id.
-
-**Pitch** (40% of the score)
-
-- [ ] The judgment story: the funnel, the calibration, the stopping rule.
-- [ ] User fit and path to value — 40% combined, and the easiest marks to drop by forgetting them.
-- [ ] Check the repo reproduces from a clean clone.
-
-### Schedule
-
-From the event website, which is the authoritative source for the day:
-
-| | |
-| --- | --- |
-| 09:00 | Doors |
-| 09:30 | Opening: task and mentor intro |
-| 10:00 | Focused work starts |
-| 12:00 | Lunch |
-| 17:00 | Pitch and presentation prep |
-| **18:00** | **Pitch submission deadline** |
-| 18:05 – 19:00 | Presentations, then jury |
-| 19:30 | Awards |
-
-**We have until 18:00, not 14:00.** Our pre-hackathon note said a 14:00 freeze; nothing on the site
-or in the task PDF supports that. Four extra hours changes what is feasible — but confirm at the
-09:30 brief before planning around it.
-
-Deliverable: **a pitch and a GitHub repo link.** Everything in the repo must be created today.
-Max team size 5. The VMs are **shut down at the end of today** — anything not pushed is gone.
-
-### Conflicts to resolve at the 09:30 brief
-
-The task PDF (6 Nov) and the participant field guide disagree. The guide calls its own numbers
-"provisional, to be confirmed in the final hackathon instructions", so the PDF probably wins — but
-one of these changes what we build, so ask.
-
-| | Task PDF | Field guide |
-| --- | --- | --- |
-| Designs submitted | ranked list of up to **20** | select up to **10** |
-| Designs tested | 4 base, up to 16 with placement | "probably five per team" |
-| Judging weights | 40 / 20 / 20 / 20 | same, marked provisional |
-
-> **Prize qualification, only on the field guide and not in the PDF:**
-> *"Apheris and Openfold are the monetary prize sponsors; to qualify for that prize, include
-> Apheris' version of Openfold in your pipeline."*
->
-> Cheap for us to satisfy and expensive to discover late: **make Apheris OpenFold3 one of our two
-> refold models** (`apheris-openfold3-v1.3.0-of3ob`, already on the VM). We wanted two independent
-> folding models for the stopping rule anyway, so this costs nothing and is on the record in the repo.
-
-AMASS awards $100 in credits to the most creative use of its platform — a separate, small prize.
-
----
-
-## Resources
-
-| What | Where | Notes |
-| --- | --- | --- |
-| Team VM | 1× H100, 16 vCPU, 196 GB RAM, 484 GB disk | all Foundry models as Docker images, already pulled |
-| Apheris Foundry | `docker run` on the VM, no Hub | design, refold-prepare, refold-score, metrics, finetune |
-| Nebius Scientific AI | `forge.py` skill or browser | ~60 hosted models, no GPU needed |
-| JapanFold | japanfold.aiand.com | $1,000 credit, RoseTTAFold3, OpenDDE, AF2-IG |
-| AMASS | platform.amass.tech | $100, literature and patents with citations |
-| Data bucket | `s3://apheris-oslo-hackathon` | read-only; `data/README.md` is the index |
-
-### The smoke test, 14 Nov 09:55
-
-The organisers' example, `bash Scripts/run-her2.sh all` in `~/rfd4` — **their pipeline, not ours.**
-4 designs → prepare top 2 → Boltz-2 refold → score, 245 s cold. Per-step times are in
-[notes/RUNTIMES.md](notes/RUNTIMES.md). It proves generate → fold → score works on this GPU. It proves
-nothing about our funnel, which does not exist yet.
-
-| Design | IMGT CDRH3 | vs trastuzumab | vs prior art | ipTM | min_ipae | binder pLDDT | abguard |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `her2_cdrh3_2` | `SRWGPPYFYAMDY` | 3 | **2** | 0.946 | 0.331 | 95.6 | **rejected** |
-| `her2_cdrh3_3` | `SRWASSSEYYFDY` | 7 | ≥ 3 | 0.965 | 0.310 | 98.5 | passes |
-
-Trastuzumab is `SRWGGDGFYAMDY`; both designs classify as `novel` (Fv identity 0.99 and 0.97).
-Four things this already tells us:
-
-1. **Half our first designs were rejected, and not by the obvious rule.** Design 2 cleared
-   trastuzumab at distance 3, then landed 2 mutations from `SRWGPYGFYAMDY` in the FACS screen.
-   **Prior art is the binding constraint, not trastuzumab** — and with 610,109 reference loops it
-   will stay that way. Any ranking we build has to run the gate *first*, or we will rank designs
-   that cannot be submitted.
-2. **`pass` is empty and that is expected** — the scorer cannot measure absolute movement on this
-   input. Rank on `min_ipae`, `iptm`, `binder_plddt`.
-3. **ipTM 0.95+ is not evidence of binding.** The Smorodina non-binders score this well too. These
-   numbers are the input to step 2's calibration, not a result.
-4. **The design model does not know the novelty rule.** It optimises predicted fit, and the HER2
-   weights were trained on the very screen we must stay away from. Expect a real rejection rate and
-   generate with margin.
-
-### What is on the VM
-
-Checked 14 Nov, 09:45. Almost nothing needs installing — the expensive parts are already there.
-
-| Installed | Detail |
-| --- | --- |
-| All Foundry models | 20 Docker images pulled, ~200 GB: RFD4-Proteina ×3 weights, Boltz-1/2, OpenFold3 ×2, Protenix v1/v2, Mol-1, ESMFold2, MSA |
-| Docker + GPU | **verified**: `--gpus all` reaches the H100 from inside a container |
-| `foundry-toolkit`, `aws`, `nextflow`, `zstd`, `jq`, `git` | on `PATH` |
-| Claude Code 2.1.322, `uv` 0.13.7, `rcsb-mcp`, `codex` | in `~/.local/bin` |
-| CUDA toolkit 13.0 | `/usr/local/cuda-13.0` |
-| foundry-assistant | local Foundry docs Q&A, models downloaded, `~/foundry-assistant` |
-
-| Missing | Cost to fix |
-| --- | --- |
-| PyTorch | `uv pip install torch`, minutes, only for our own models |
-| Nebius skills | `bash agent/install.sh`, ~1 min |
-
-### abguard
-
-Installed in `.venv-abguard/` (git-ignored) from the wheel already in the shared `uv` cache —
-a teammate installed it on 11 Nov, so nothing was downloaded:
-
-```bash
-uv venv --python 3.12 .venv-abguard
-VIRTUAL_ENV=$PWD/.venv-abguard uv pip install \
-  ~/.cache/uv/sdists-v10/path/bd466a53b5e23834/nSBDF8oKc5yFGa5i/abguard-0.1.0-py3-none-any.whl
-```
-
-> **Two wheels on this VM both call themselves `abguard 0.1.0`, and they are not the same tool.**
-> The 11 Nov build, the one with the novelty gate, is the correct one and is what the command above
-> installs. The 10 Nov build has no `novelty.py`, no reference data and no novelty gate: it validates
-> the hard filters, reports every design compliant, and never mentions that it skipped the check that
-> matters. We installed it first and got a clean "2/2 valid" on a submission that is **not** valid.
-> Anyone setting up a second machine should verify before trusting a verdict:
->
-> ```bash
-> ./.venv-abguard/bin/abguard --help | grep novelty-report   # must print
-> ```
-
-Usage, no network and no 4.2 GB DuckDB needed — the wheel bundles the reference index
-(610,109 CDRH3s, 2 MB Parquet, IMGT, min_confidence 0.1):
-
-```bash
-./.venv-abguard/bin/abguard team-validate submission.csv          # the real gate
-./.venv-abguard/bin/abguard team-validate submission.csv --drop   # keep the good rows
-./.venv-abguard/bin/abguard novelty-report submission.csv         # trastuzumab only, no prior art
-./.venv-abguard/bin/abguard liability-report submission.csv       # LAP liabilities
-```
-
-Columns: `sequence_id, kind, heavy_sequence, light_sequence, design_description`, with `kind` one of
-`vhh` / `scfv` / `paired`. Two designs validate in 0.5 s, so run it early and often.
-
-**`novelty-report` does not check prior art.** It compares against trastuzumab alone and leaves
-`is_novel_enough` null — it says so in a warning that is easy to miss. Only `team-validate` runs the
-full gate. Do not use the report as a pre-filter and assume the designs are submittable.
-
-`~/.local/bin` is on `PATH` only in a login shell. Over SSH use `ssh ... bash -lc '...'`, or
-`claude`, `uv` and `rcsb-mcp` will look missing when they are not.
-
-### Nebius
-
-Installed on the VM: the 51-skill bundle plus the client, in `~/.claude/skills/`. Credentials and the
-kit are in `~/ioannis/nebius/`, **outside the repo**.
-
-```bash
-cd ~/ioannis/nebius && export NEBIUS_CREDS=$PWD/credentials.private.json
-F=~/.claude/skills/nebius-scientific-ai/forge.py
-python3 "$F" models                 # 34 of 59 with a tested input format
-python3 "$F" schema <model>         # never ask for the full catalog, it is ~930 KB
-python3 "$F" runs | status op-xxx | wait op-xxx | fetch op-xxx --dest results/run1
-```
-
-Why it earns its place, given the VM already has the Apheris models:
-
-- **Parallelism.** One H100, and design is the long pole. Anything scored here runs while the GPU
-  keeps generating.
-- **Models the VM does not have:** `antifold` (antibody-aware CDR redesign, keeps the framework),
-  `nanobodybuilder2` / `abodybuilder3`, `esm-if1`, the ESM-2 / ESM-C and SaProt families,
-  `proteinmpnn`, `stab-ddg`.
-
-> **`stab-ddg` is a *binding* ddG predictor, not a thermostability one.** StaB-ddG scores ΔΔG of
-> binding for named point mutations across two partner chains, so it serves the **affinity** axis —
-> usefully, since it is independent of the FACS screen everything else is trained on.
-> **Thermostability still has no model anywhere in our stack.** Nothing on Nebius, nothing on the VM.
-> That axis needs a decision, not a tool we already have.
-
-Never submit the same job twice; after a storage failure use `resume`, not a new submit. First calls
-are slow because the model loads on demand, 30 s to 26 min depending on the model.
-
-### JapanFold
-
-Skill at `~/.claude/skills/japanfold/SKILL.md` (installed by curl — the documented `npx skills add`
-route needs node, which the VM does not have). Token in `~/ioannis/japanfold.env`, **outside the
-repo**, mode 600.
-
-```bash
-set -a; . ~/ioannis/japanfold.env; set +a
-curl -s -H "Authorization: Bearer $JAPANFOLD_API_KEY" $JAPANFOLD_BASE_URL/v1/models
-curl -s -H "Authorization: Bearer $JAPANFOLD_API_KEY" $JAPANFOLD_BASE_URL/v1/account   # balance
-```
-
-Verified working, balance **$1,100**. Billing is $0.26 per processor-hour and queue time is free, so
-at the per-target costs below the credit is effectively unlimited — **do not ration jobs here.**
-
-| Model | Why we care | $ / target |
-| --- | --- | --- |
-| `af2ig` | **AF2-IG.** Scores a binder we already designed and reports ipTM and interface PAE. No MSA, no sampling, so the same input always gives the same answer | 0.0004 |
-| `opendde-abag` | **OpenDDE antibody-antigen checkpoint**, Protenix-v2 stack. Purpose-built for Fab + antigen | 0.006 |
-| `rf3` | **RoseTTAFold3**, a third independent lineage for the spread | 0.007 |
-| `boltz2`, `openfold3`, `esmfold2` | same models as the VM, useful to parallelise off our one GPU | 0.002–0.003 |
-
-Two properties worth exploiting:
-
-- **AF2-IG is deterministic.** Every other scorer we have samples, so repeat runs disagree with
-  themselves. A scorer with no sampling noise removes one term from the stopping rule's spread and
-  makes the remaining disagreement mean something.
-- **It is the filter a binder pipeline uses to separate a real design from a plausible one**, which
-  is exactly the cut our funnel has to defend.
-
-> **Use ipSAE, not bare ipTM.** JapanFold's `write_pae` option returns the full PAE matrix and
-> documents it as *"the one Adaptyv's ipSAE pipeline reads"*. Adaptyv runs our designs, and the
-> Smorodina calibration set uses ipSAE as well. So the metric our step-2 calibration should produce,
-> and the metric we should rank on, is ipSAE computed from PAE — not the ipTM number a folding model
-> prints. Pass `write_pae: true` on every scoring run or the matrix is not returned.
-
-**Folding models.** Prefer one that takes a template for binders, which sees the known HER2 structure
-and gives a fairer check: Boltz-2, OpenFold3, Protenix v2, Mol-1. Use two independent models and treat
-their spread as the noise floor — that spread *is* the stopping rule's threshold.
-**Make Apheris OpenFold3 one of the two**: it is a stated condition of the monetary prize
-(see [conflicts](#conflicts-to-resolve-at-the-0930-brief)).
-
-Two traps already documented: **OpenFold2 never comes up** (fails after ~55 min, both loaded and idle —
-use OpenFold3 or Boltz-2), and **do not rank on CDRH3 refold agreement**, because Protenix does not
-reproduce trastuzumab's own CDRH3 loop.
-
-### Keys
-
-Credentials stay out of the repo. `*.private.json` and `data/raw/` are git-ignored; point tools at the
-file with `NEBIUS_CREDS`, never paste a key into a prompt. **The repo is public.**
+| Track assignment | whole-Fv identity ≥ 70% → `novel`, < 70% → `de_novo` |
+
+Three traps worth stating plainly:
+
+- **The 70% identity only picks the track.** It is not a pass/fail, and it is not CDRH3 identity,
+  whatever the PDF says. You do not choose your track, and a design is never reclassified.
+- **Use the IMGT 13-mer, never the 10-mer core** `WGGDGFYAMD` that the assay tables use. `abguard`
+  re-derives every reference loop to IMGT precisely because comparing against the cores would hand
+  every design three free mutations from the flanks alone.
+- **The binding constraint is prior art, not trastuzumab.** A loop can sit 3 mutations from
+  trastuzumab and still be rejected for landing 2 from something in the FACS screen — which is
+  exactly what happened to one of our first two designs.
+
+Two numbers that look contradictory and are not: **610,109** is `abguard`'s bundled reference index;
+**525,042** is the blacklist our local pre-filter builds from the two provided tables plus
+trastuzumab. The local filter is a cheap superset check that keeps the 900-second CLI off the hot
+path — `abguard` still has the last word at step 13.
+
+> ⚠️ **`novelty-report` does not check prior art.** It compares against trastuzumab alone and leaves
+> `is_novel_enough` null, in a warning that is easy to miss. Only **`team-validate`** runs the full
+> gate. Do not use the report as a pre-filter and assume the designs are submittable.
 
 ---
 
 ## Development
 
-Install `uv` if you don't have it already:
-
 ```bash
-curl --location --silent --show-error --fail https://astral.sh/uv/install.sh | sh
+make dev      # virtualenv & dependencies
+make test     # pytest, including doctests
+make lint     # mypy, ruff, black, isort
+make wheel    # check the wheel packages
 ```
 
-See also [installing uv].
+Doctests live on the pure functions in `sequences.py`, `novelty.py` and `table.py` — the places
+where an off-by-one silently changes which designs are legal. Four regression tests encode failures
+we actually hit:
 
-```bash
-git clone git@github.com:NOI-IoannisVardaxis/her2-stopping-rule.git
-cd her2-stopping-rule
-make dev     # python virtualenv & dependencies
-make test
-make lint
-make wheel   # check the wheel packages
-```
+- trastuzumab itself must **fail** novelty,
+- a 3-mutation design must clear the mutation floor,
+- a paired construct must come out at 227 aa,
+- the pruned prior-art scan must agree with unpruned brute force.
 
-We edit locally, push, and pull on the VM; runs happen on the VM and results are pushed back.
-`results/` and `nebius-runs/` hold outputs and run ids, no keys, and are committed — showing where
-each score came from is part of the 20% execution score.
+**Dependencies** are managed by [uv]: `uv add <package>`, or `uv add --dev <package>`. The change
+lands in `pyproject.toml` and is locked in `uv.lock` — commit both.
 
-### Dependency management
+### Outputs and what is tracked
 
-[uv] manages dependencies. Run `uv add package`, or `uv add --dev package` for dev dependencies; the
-change lands in `pyproject.toml` and is locked in `uv.lock`. Commit both.
+`results/` holds outputs and run ids, never keys. The **text** files are committed —
+`funnel.json`, `baseline.json`, `shortlist.csv`, `submission*.csv` — because showing where each
+score came from is part of the work.
 
-`uv run` ensures the dependencies in `pyproject.toml` are installed before running, so python
-environments never have to be managed by hand.
+**`results/designs.parquet` is git-ignored.** It is a derived artefact: deterministic under
+`--seed` and rebuilt by `03a_enumerate` in seconds. Tracking it would cost us a binary file that
+**conflicts on every concurrent pull** when two people run steps, plus a history that grows by the
+full table each time it is scored. Copy it with `scp` if it is ever genuinely needed.
+
+### Credentials
+
+**This repo is public.** Credentials stay outside it — `*.private.json` and `data/raw/` are
+git-ignored. Point tools at the credentials file with an environment variable; never paste a key
+into a prompt.
+
+---
+
+## Also in this repo
+
+| | |
+| --- | --- |
+| [PIPELINE.md](PIPELINE.md) | Install, run, configure; the step table and threshold reference |
+| [GLOSSARY.md](GLOSSARY.md) | Terminology |
+| [docs/TOOLING.md](docs/TOOLING.md) | The external tools — `abguard`, Nebius, JapanFold, the folding models — and the traps we hit using each one |
 
 [uv]: https://github.com/astral-sh/uv
-[scripts]: https://docs.astral.sh/uv/guides/scripts/
-[installing uv]: https://docs.astral.sh/uv/getting-started/installation/
