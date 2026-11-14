@@ -35,8 +35,9 @@ A rough plan to beat, assuming the per-design cost holds:
 | 100 designs, refold top 20 | ~45 min | ~12 min | ~1 h |
 | 300 designs, refold top 50 | ~2 h | ~30 min | ~2.5 h |
 
-Designs freeze at 14:00. Start the big generation run early and do the filtering work
-while it runs.
+The pitch deadline is 18:00 (event website); our pre-hackathon note said a 14:00 design freeze
+and nothing supports that — confirm at the brief. Either way, start the big generation run early
+and do the filtering work while it runs.
 
 ## Still to measure
 

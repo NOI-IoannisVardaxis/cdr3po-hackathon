@@ -104,7 +104,7 @@ Six steps. Parallelise: design on the VM's H100, score on Nebius, keep the slow 
 | 2 | Calibrate the confidence filter on measured non-binders | VM, CPU | a cutoff with a stated false-positive rate |
 | 3 | Generate CDRH3 variants: HER2 novel + exploratory (optimisation), antibody weight (de novo) | VM, GPU | a few hundred designs |
 | 4 | Filter: `abguard`, then novelty, then liabilities and expression proxies | VM | the survivors |
-| 5 | Score: refold against HER2 with two independent models; predict affinity and thermostability | VM + Nebius | one row per design |
+| 5 | Score: refold against HER2 with two independent models, **OpenFold3 (Apheris) + Boltz-2**; predict affinity and thermostability | VM + Nebius | one row per design |
 | 6 | Rank, stop, and write down why | here | 20 designs with reasons |
 
 ### TODO
@@ -160,10 +160,49 @@ Most of the stack is already installed — see [What is on the VM](#what-is-on-t
 - [ ] User fit and path to value — 40% combined, and the easiest marks to drop by forgetting them.
 - [ ] Check the repo reproduces from a clean clone.
 
-### Deadlines
+### Schedule
 
-Designs freeze at **14:00**. The VMs are **shut down at the end of Saturday 14 November** — anything
-not pushed to GitHub by then is gone.
+From the event website, which is the authoritative source for the day:
+
+| | |
+| --- | --- |
+| 09:00 | Doors |
+| 09:30 | Opening: task and mentor intro |
+| 10:00 | Focused work starts |
+| 12:00 | Lunch |
+| 17:00 | Pitch and presentation prep |
+| **18:00** | **Pitch submission deadline** |
+| 18:05 – 19:00 | Presentations, then jury |
+| 19:30 | Awards |
+
+**We have until 18:00, not 14:00.** Our pre-hackathon note said a 14:00 freeze; nothing on the site
+or in the task PDF supports that. Four extra hours changes what is feasible — but confirm at the
+09:30 brief before planning around it.
+
+Deliverable: **a pitch and a GitHub repo link.** Everything in the repo must be created today.
+Max team size 5. The VMs are **shut down at the end of today** — anything not pushed is gone.
+
+### Conflicts to resolve at the 09:30 brief
+
+The task PDF (6 Nov) and the participant field guide disagree. The guide calls its own numbers
+"provisional, to be confirmed in the final hackathon instructions", so the PDF probably wins — but
+one of these changes what we build, so ask.
+
+| | Task PDF | Field guide |
+| --- | --- | --- |
+| Designs submitted | ranked list of up to **20** | select up to **10** |
+| Designs tested | 4 base, up to 16 with placement | "probably five per team" |
+| Judging weights | 40 / 20 / 20 / 20 | same, marked provisional |
+
+> **Prize qualification, only on the field guide and not in the PDF:**
+> *"Apheris and Openfold are the monetary prize sponsors; to qualify for that prize, include
+> Apheris' version of Openfold in your pipeline."*
+>
+> Cheap for us to satisfy and expensive to discover late: **make Apheris OpenFold3 one of our two
+> refold models** (`apheris-openfold3-v1.3.0-of3ob`, already on the VM). We wanted two independent
+> folding models for the stopping rule anyway, so this costs nothing and is on the record in the repo.
+
+AMASS awards $100 in credits to the most creative use of its platform — a separate, small prize.
 
 ---
 
@@ -268,6 +307,8 @@ full gate. Do not use the report as a pre-filter and assume the designs are subm
 **Folding models.** Prefer one that takes a template for binders, which sees the known HER2 structure
 and gives a fairer check: Boltz-2, OpenFold3, Protenix v2, Mol-1. Use two independent models and treat
 their spread as the noise floor — that spread *is* the stopping rule's threshold.
+**Make Apheris OpenFold3 one of the two**: it is a stated condition of the monetary prize
+(see [conflicts](#conflicts-to-resolve-at-the-0930-brief)).
 
 Two traps already documented: **OpenFold2 never comes up** (fails after ~55 min, both loaded and idle —
 use OpenFold3 or Boltz-2), and **do not rank on CDRH3 refold agreement**, because Protenix does not
