@@ -113,9 +113,7 @@ Six steps. Parallelise: design on the VM's H100, score on Nebius, keep the slow 
 
 - [x] `abguard` — installed and verified, see [abguard](#abguard). Novelty thresholds read from its
       source, so there is nothing to ask the organisers.
-- [ ] **Confirm we have the current `abguard` build.** Two different wheels on this VM both call
-      themselves `0.1.0` and one has no novelty gate at all (see below). Ask Apheris whether 11 Nov
-      is the final one before trusting any verdict.
+- [x] Build confirmed: the **11 Nov wheel, the one with the novelty gate**, is the correct one.
 - [ ] `foundry-toolkit login` — no stored credential, so `module list` and `module describe` fail.
       Probably not blocking: every image is already pulled, and `docker run` needs no login.
 - [ ] Decide the track split. Recommendation: weight optimisation heavily, keep a few de novo VHHs as
@@ -132,24 +130,27 @@ Most of the stack is already installed — see [What is on the VM](#what-is-on-t
 - [x] Smoke test green — see [the smoke test](#the-smoke-test-14-nov-0955).
 - [ ] `uv pip install torch` if we train our own affinity or thermostability model (step 5).
       `torch.cuda.is_available()` must print `True` before anything else.
-- [ ] Nebius: `bash agent/install.sh`, then `export NEBIUS_CREDS=...`. Keys live outside the repo.
-      The VM account is shared with the other teams' folders, so decide before copying keys there.
-- [ ] Redeem the JapanFold code ($1,000, one account, the one that runs the jobs) and claim AMASS ($100).
+- [x] Nebius installed — see [Nebius](#nebius). 51 skills plus the client, 34 callable models.
+- [x] JapanFold redeemed and working — see [JapanFold](#japanfold). Balance $1,100.
+- [ ] AMASS ($100) — deferred, it is a pitch tool and contributes nothing to the pipeline.
 
 **Pipeline**
 
 - [ ] Step 1 baseline. Everything is relative to trastuzumab; without this number no claim is checkable.
-- [ ] Step 2 calibration — the differentiator. Use `sigma2-ab-ag-champloo/` ipTM/PAE per replica and the
-      SPR supplementary tables. Note: "no reportable fit" is **not** a true negative; only the 454
-      measured non-binders are.
+- [ ] Step 2 calibration — the differentiator. Use `sigma2-ab-ag-champloo/` per-replica PAE and the
+      SPR supplementary tables. **Calibrate ipSAE computed from PAE, not bare ipTM** — it is what the
+      Smorodina study and Adaptyv both use. Note: "no reportable fit" is **not** a true negative;
+      only the 454 measured non-binders are.
 - [ ] Step 3 generation. Start RFD4 jobs early, they are the long pole. `her2-novel-2026-11-09` passes
       novelty 86% of the time with the lowest interface error (6.8 Å) — start there, add
       `her2-2026-11-07 --sequence-tsr-k 1` for variety.
 - [ ] Step 4 filters, including the expression proxies Adaptyv recommends: Aggrescan 3D, SoluProt,
       NetSolP, ProteinMPNN soluble weights. A design that does not express scores zero on all three axes.
 - [ ] Step 5a affinity: train on the SPR table (190 KDs) and the FACS classes; rank, do not trust absolutely.
-- [ ] Step 5b thermostability: no provided model — decide the approach (ddG predictor, or framework
-      choice plus disulfide/liability inspection). **The most under-served axis; do not leave it to the end.**
+- [ ] Step 5b thermostability: **no model exists in our stack** — not on the VM, not on Nebius.
+      `stab-ddg` is binding ddG, not thermal stability. Decide the approach: a folding-ddG or Tm
+      predictor installed ourselves, or framework choice plus disulfide and liability inspection.
+      **The most under-served axis, and the one nothing we have will solve for us.**
 - [ ] Step 5c epitope: co-fold each design with HER2, check the CDRH3 contacts the 1N8Z epitope.
 - [ ] Step 6 the stopping rule itself, written as code with its threshold derived from step 2.
 - [ ] Ranked list of 20, each with a one-line reason and its run id.
@@ -275,10 +276,11 @@ VIRTUAL_ENV=$PWD/.venv-abguard uv pip install \
 ```
 
 > **Two wheels on this VM both call themselves `abguard 0.1.0`, and they are not the same tool.**
-> The 10 Nov build has no `novelty.py`, no reference data and no novelty gate: it validates the hard
-> filters, reports every design compliant, and never mentions that it skipped the check that matters.
-> We installed it first and got a clean "2/2 valid" on a submission that is **not** valid.
-> Always verify before trusting a verdict:
+> The 11 Nov build, the one with the novelty gate, is the correct one and is what the command above
+> installs. The 10 Nov build has no `novelty.py`, no reference data and no novelty gate: it validates
+> the hard filters, reports every design compliant, and never mentions that it skipped the check that
+> matters. We installed it first and got a clean "2/2 valid" on a submission that is **not** valid.
+> Anyone setting up a second machine should verify before trusting a verdict:
 >
 > ```bash
 > ./.venv-abguard/bin/abguard --help | grep novelty-report   # must print
@@ -303,6 +305,72 @@ full gate. Do not use the report as a pre-filter and assume the designs are subm
 
 `~/.local/bin` is on `PATH` only in a login shell. Over SSH use `ssh ... bash -lc '...'`, or
 `claude`, `uv` and `rcsb-mcp` will look missing when they are not.
+
+### Nebius
+
+Installed on the VM: the 51-skill bundle plus the client, in `~/.claude/skills/`. Credentials and the
+kit are in `~/ioannis/nebius/`, **outside the repo**.
+
+```bash
+cd ~/ioannis/nebius && export NEBIUS_CREDS=$PWD/credentials.private.json
+F=~/.claude/skills/nebius-scientific-ai/forge.py
+python3 "$F" models                 # 34 of 59 with a tested input format
+python3 "$F" schema <model>         # never ask for the full catalog, it is ~930 KB
+python3 "$F" runs | status op-xxx | wait op-xxx | fetch op-xxx --dest results/run1
+```
+
+Why it earns its place, given the VM already has the Apheris models:
+
+- **Parallelism.** One H100, and design is the long pole. Anything scored here runs while the GPU
+  keeps generating.
+- **Models the VM does not have:** `antifold` (antibody-aware CDR redesign, keeps the framework),
+  `nanobodybuilder2` / `abodybuilder3`, `esm-if1`, the ESM-2 / ESM-C and SaProt families,
+  `proteinmpnn`, `stab-ddg`.
+
+> **`stab-ddg` is a *binding* ddG predictor, not a thermostability one.** StaB-ddG scores ΔΔG of
+> binding for named point mutations across two partner chains, so it serves the **affinity** axis —
+> usefully, since it is independent of the FACS screen everything else is trained on.
+> **Thermostability still has no model anywhere in our stack.** Nothing on Nebius, nothing on the VM.
+> That axis needs a decision, not a tool we already have.
+
+Never submit the same job twice; after a storage failure use `resume`, not a new submit. First calls
+are slow because the model loads on demand, 30 s to 26 min depending on the model.
+
+### JapanFold
+
+Skill at `~/.claude/skills/japanfold/SKILL.md` (installed by curl — the documented `npx skills add`
+route needs node, which the VM does not have). Token in `~/ioannis/japanfold.env`, **outside the
+repo**, mode 600.
+
+```bash
+set -a; . ~/ioannis/japanfold.env; set +a
+curl -s -H "Authorization: Bearer $JAPANFOLD_API_KEY" $JAPANFOLD_BASE_URL/v1/models
+curl -s -H "Authorization: Bearer $JAPANFOLD_API_KEY" $JAPANFOLD_BASE_URL/v1/account   # balance
+```
+
+Verified working, balance **$1,100**. Billing is $0.26 per processor-hour and queue time is free, so
+at the per-target costs below the credit is effectively unlimited — **do not ration jobs here.**
+
+| Model | Why we care | $ / target |
+| --- | --- | --- |
+| `af2ig` | **AF2-IG.** Scores a binder we already designed and reports ipTM and interface PAE. No MSA, no sampling, so the same input always gives the same answer | 0.0004 |
+| `opendde-abag` | **OpenDDE antibody-antigen checkpoint**, Protenix-v2 stack. Purpose-built for Fab + antigen | 0.006 |
+| `rf3` | **RoseTTAFold3**, a third independent lineage for the spread | 0.007 |
+| `boltz2`, `openfold3`, `esmfold2` | same models as the VM, useful to parallelise off our one GPU | 0.002–0.003 |
+
+Two properties worth exploiting:
+
+- **AF2-IG is deterministic.** Every other scorer we have samples, so repeat runs disagree with
+  themselves. A scorer with no sampling noise removes one term from the stopping rule's spread and
+  makes the remaining disagreement mean something.
+- **It is the filter a binder pipeline uses to separate a real design from a plausible one**, which
+  is exactly the cut our funnel has to defend.
+
+> **Use ipSAE, not bare ipTM.** JapanFold's `write_pae` option returns the full PAE matrix and
+> documents it as *"the one Adaptyv's ipSAE pipeline reads"*. Adaptyv runs our designs, and the
+> Smorodina calibration set uses ipSAE as well. So the metric our step-2 calibration should produce,
+> and the metric we should rank on, is ipSAE computed from PAE — not the ipTM number a folding model
+> prints. Pass `write_pae: true` on every scoring run or the matrix is not returned.
 
 **Folding models.** Prefer one that takes a template for binders, which sees the known HER2 structure
 and gives a fairer check: Boltz-2, OpenFold3, Protenix v2, Mol-1. Use two independent models and treat
