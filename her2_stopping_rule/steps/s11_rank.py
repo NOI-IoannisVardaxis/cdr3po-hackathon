@@ -13,6 +13,7 @@ sequence length they add a network dependency for marginal gain.
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -55,6 +56,29 @@ def cluster_loops(loops: list[str], n_clusters: int) -> np.ndarray:
     return fcluster(tree, t=min(n_clusters, len(loops)), criterion="maxclust")
 
 
+def beats_baseline_threshold(cfg: Config) -> float:
+    """Surrogate score above which a design is counted as beating the baseline.
+
+    Read from the calibration step 5a writes, which connects surrogate scores
+    to measured KDs. Falls back to a stringent constant when that file is
+    absent, never to 0.5: at 0.5 the surrogate keeps 88% of measured variants
+    and captures the base rate rather than an improvement.
+
+    Args:
+        cfg: Pipeline configuration.
+
+    Returns:
+        The threshold.
+    """
+    path = cfg.results_dir / "affinity_calibration.json"
+    if path.exists():
+        try:
+            return float(json.loads(path.read_text())["threshold"])
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+            pass
+    return 0.99
+
+
 def predicted_tier(cfg: Config) -> pl.Expr:
     """Count how many judged axes a design is predicted to beat the baseline on.
 
@@ -73,7 +97,11 @@ def predicted_tier(cfg: Config) -> pl.Expr:
     Returns:
         An integer expression from 0 to 3.
     """
-    affinity = (pl.col("p_high") > 0.5).fill_null(False).cast(pl.Int32)
+    affinity = (
+        (pl.col("p_high") >= beats_baseline_threshold(cfg))
+        .fill_null(False)
+        .cast(pl.Int32)
+    )
     epitope = (
         (pl.col("epitope_recovery") >= cfg.min_epitope_recovery)
         .fill_null(False)

@@ -229,12 +229,26 @@ def test_predicted_tier_counts_only_evidence() -> None:
     cfg = Config()
     df = pl.DataFrame(
         {
-            "p_high": [0.9, 0.9, None],
+            "p_high": [0.995, 0.995, None],
             "epitope_recovery": [0.9, None, None],
             "disulfide_formed": [True, None, None],
         }
     )
     assert df.select(predicted_tier(cfg))[:, 0].to_list() == [3, 1, 0]
+
+
+def test_affinity_threshold_is_not_a_coin_flip() -> None:
+    """Counting affinity as improved at p_high > 0.5 captures the base rate.
+
+    The FACS classes are defined relative to the variant population, not to
+    trastuzumab, which is not in that table. Measured against the 187 SPR
+    rows with a KD: 12 beat the baseline, and a 0.5 threshold keeps 164 of
+    them at 7.3% precision against a 6.4% base rate. The threshold has to
+    come from the measured KDs.
+    """
+    from her2_stopping_rule.steps.s11_rank import beats_baseline_threshold
+
+    assert beats_baseline_threshold(Config()) >= 0.9
 
 
 def test_reference_prune_never_hides_a_collision() -> None:

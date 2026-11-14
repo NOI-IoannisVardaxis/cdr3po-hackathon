@@ -17,6 +17,7 @@ stops looking past the top of the list.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -188,6 +189,11 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
         return df
 
     metrics = validate_holdout(cfg)
+    calibration = calibrate_against_baseline(cfg)
+    if calibration is not None:
+        (cfg.results_dir / "affinity_calibration.json").write_text(
+            json.dumps(calibration.__dict__, indent=2)
+        )
     model = fit_full(cfg)
     probabilities = score(model, live["cdr3_imgt"].to_list())
 
@@ -230,3 +236,85 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
                 f"ROC-AUC {metrics.roc_auc:.3f} against a {metrics.base_rate:.1%} base rate"
             )
     return merged
+
+
+@dataclass(frozen=True)
+class BaselineCalibration:
+    """What a surrogate score means relative to the clinical baseline.
+
+    The surrogate predicts membership of the FACS "high" class, and those
+    classes are defined relative to the variant population, not to
+    trastuzumab -- which is not even in that table. So a high score is not
+    the same claim as "beats 0.152 nM", and the two have to be connected
+    through the only data that measures both: the 187 SPR rows carrying a
+    KD and a comparable CDR3.
+
+    Attributes:
+        threshold: Surrogate score at which a design is counted as improving
+            on the baseline.
+        precision: Share of SPR variants above that score that really do beat
+            the baseline.
+        base_rate: Share of all measured variants that beat it, for contrast.
+        enrichment: precision / base_rate.
+        auc: How well the surrogate separates beating from not beating.
+        n_measured: SPR variants used.
+        n_beating: How many of them beat the baseline.
+    """
+
+    threshold: float
+    precision: float
+    base_rate: float
+    enrichment: float
+    auc: float
+    n_measured: int
+    n_beating: int
+
+
+def calibrate_against_baseline(
+    cfg: Config, candidates: tuple[float, ...] = (0.5, 0.7, 0.8, 0.9, 0.95, 0.99)
+) -> BaselineCalibration | None:
+    """Find the surrogate score that actually means "better than trastuzumab".
+
+    Beating a clinical antibody is rare: 12 of 187 measured variants manage
+    it. A threshold of 0.5 keeps 164 of them and captures all 12, which is
+    the base rate dressed up as a filter.
+
+    Args:
+        cfg: Pipeline configuration.
+        candidates: Thresholds to consider, lowest first.
+
+    Returns:
+        The calibration, or None when the SPR table has no usable rows.
+    """
+    import polars as pl_
+
+    from ..config import BASELINE_KD_NM
+    from ..data import load_spr
+
+    spr = load_spr(cfg).filter(pl_.col("kd_nM").is_not_null() & pl_.col("comparable"))
+    if spr.height == 0:
+        return None
+
+    model = fit_full(cfg)
+    scores = score(model, spr["cdr3_imgt"].to_list())
+    beats = (spr["kd_nM"].to_numpy() < BASELINE_KD_NM).astype(int)
+    base_rate = float(beats.mean())
+
+    best = max(
+        (
+            (float((beats[scores >= t]).mean()), t)
+            for t in candidates
+            if (scores >= t).sum() >= 10
+        ),
+        default=(base_rate, candidates[0]),
+    )
+    precision, threshold = best
+    return BaselineCalibration(
+        threshold=float(threshold),
+        precision=precision,
+        base_rate=base_rate,
+        enrichment=precision / base_rate if base_rate else float("nan"),
+        auc=float(roc_auc_score(beats, scores)),
+        n_measured=int(spr.height),
+        n_beating=int(beats.sum()),
+    )
