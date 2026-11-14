@@ -110,3 +110,6 @@ dump.rdb
 data/raw/
 *.cif
 *.pdb
+
+# IDEs
+.idea/
