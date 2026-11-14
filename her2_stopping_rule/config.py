@@ -111,7 +111,7 @@ class Config:
 
     # step 7 fold
     fold_models: tuple[str, ...] = ("boltz2", "openfold3")
-    n_finalists: int = 48
+    n_finalists: int = 96
 
     # step 8 calibrate
     iptm_fpr: float = 0.05

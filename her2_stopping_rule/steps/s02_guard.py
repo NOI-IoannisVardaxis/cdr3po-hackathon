@@ -210,20 +210,52 @@ def validate(df: pl.DataFrame, cfg: Config) -> dict[str, Verdict]:
     check_available(cfg)
     if df.height == 0:
         return {}
+
+    # Compliance is decided by membership in abguard's own --drop output, not
+    # by reading its error text. abguard truncates the error list, so parsing
+    # it passes designs that a later, smaller call then rejects: that is
+    # exactly how ten patent collisions reached a finished submission.
+    # The error text is still read, but only to explain a rejection.
     with tempfile.TemporaryDirectory() as tmp:
         csv_path = write_submission(df, Path(tmp) / "submission.csv")
+        kept_path = Path(tmp) / "kept.csv"
         proc = subprocess.run(
-            [str(cfg.path("abguard")), "team-validate", str(csv_path)],
+            [
+                str(cfg.path("abguard")),
+                "team-validate",
+                str(csv_path),
+                "--drop",
+                "--output",
+                str(kept_path),
+            ],
             capture_output=True,
             check=False,
             text=True,
             timeout=900,
         )
+        survivors: set[str] = set()
+        if kept_path.exists():
+            survivors = set(pl.read_csv(kept_path)["sequence_id"].to_list())
+        elif proc.returncode == 0:
+            # Nothing was dropped, so nothing was written.
+            survivors = set(df["sequence_id"].to_list())
+
     failures = parse_errors(proc.stdout + proc.stderr)
-    return {
-        sid: failures.get(sid, Verdict(sequence_id=sid, compliant=True))
-        for sid in df["sequence_id"].to_list()
-    }
+    verdicts: dict[str, Verdict] = {}
+    for sid in df["sequence_id"].to_list():
+        if sid in survivors:
+            verdicts[sid] = Verdict(sequence_id=sid, compliant=True)
+        else:
+            verdicts[sid] = failures.get(
+                sid,
+                Verdict(
+                    sequence_id=sid,
+                    compliant=False,
+                    rule="abguard",
+                    message="dropped by abguard; reason not in the truncated error list",
+                ),
+            )
+    return verdicts
 
 
 def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataFrame:

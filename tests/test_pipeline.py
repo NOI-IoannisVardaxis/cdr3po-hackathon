@@ -322,3 +322,27 @@ def test_only_real_constructs_are_submittable() -> None:
         }
     )
     assert order_by_track(df, Config())["design_id"].to_list() == ["real"]
+
+
+def test_guard_uses_membership_not_error_parsing() -> None:
+    """A design absent from abguard's --drop output is rejected, reason or not.
+
+    abguard truncates its error list, so a guard that decides compliance by
+    reading error text passes designs a later, smaller call then rejects.
+    That is how ten patent collisions reached a finished submission.
+    """
+    from her2_stopping_rule.steps.s02_guard import Verdict
+
+    survivors = {"a"}
+    failures = {"b": Verdict("b", False, "novelty", "patent")}
+    verdicts = {}
+    for sid in ("a", "b", "c"):
+        verdicts[sid] = (
+            Verdict(sid, True)
+            if sid in survivors
+            else failures.get(sid, Verdict(sid, False, "abguard", "not in output"))
+        )
+    assert verdicts["a"].compliant
+    assert not verdicts["b"].compliant
+    # c has no error line at all and must still be rejected.
+    assert not verdicts["c"].compliant
