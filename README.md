@@ -101,16 +101,18 @@ Six steps. Parallelise: design on the VM's H100, score on Nebius, keep the slow 
 
 **Setup on the VM** (`~/ioannis/her2-stopping-rule`)
 
-Most of the stack is already installed — see [What is on the VM](#what-is-on-the-vm). Only these remain:
+Most of the stack is already installed — see [What is on the VM](#what-is-on-the-vm).
 
-- [ ] `aws s3 sync s3://apheris-oslo-hackathon/rfd4-proteina/docs/ ~/rfd4` — docs, `Data/`, `Settings/`
+- [x] `aws s3 sync s3://apheris-oslo-hackathon/rfd4-proteina/docs/ ~/rfd4` — docs, `Data/`, `Settings/`
       and `Scripts/run-her2.sh`, the 4-design smoke test.
-- [ ] `aws s3 cp s3://apheris-oslo-hackathon/data/her2-trastuzumab/ data/her2-trastuzumab/ --recursive` (6 MB).
+- [x] HER2 tables (6 MB) in `data/raw/her2-trastuzumab/`. **Note:** `data/raw/` is the git-ignored path,
+      not `data/` as the Apheris docs suggest. Keep organiser data out of this public repo.
+- [x] Smoke test green — see [the smoke test](#the-smoke-test-14-nov-0955).
 - [ ] `uv pip install torch` if we train our own affinity or thermostability model (step 5).
       `torch.cuda.is_available()` must print `True` before anything else.
 - [ ] Nebius: `bash agent/install.sh`, then `export NEBIUS_CREDS=...`. Keys live outside the repo.
+      The VM account is shared with the other teams' folders, so decide before copying keys there.
 - [ ] Redeem the JapanFold code ($1,000, one account, the one that runs the jobs) and claim AMASS ($100).
-- [ ] Run `bash Scripts/run-her2.sh all` end to end once, early, before trusting any of it.
 
 **Pipeline**
 
@@ -153,6 +155,28 @@ not pushed to GitHub by then is gone.
 | JapanFold | japanfold.aiand.com | $1,000 credit, RoseTTAFold3, OpenDDE, AF2-IG |
 | AMASS | platform.amass.tech | $100, literature and patents with citations |
 | Data bucket | `s3://apheris-oslo-hackathon` | read-only; `data/README.md` is the index |
+
+### The smoke test, 14 Nov 09:55
+
+The organisers' example, `bash Scripts/run-her2.sh all` in `~/rfd4` — **their pipeline, not ours.**
+4 designs → prepare top 2 → Boltz-2 refold → score, 245 s cold. Per-step times are in
+[notes/RUNTIMES.md](notes/RUNTIMES.md). It proves generate → fold → score works on this GPU. It proves
+nothing about our funnel, which does not exist yet.
+
+| Design | CDRH3 | Changed vs trastuzumab | ipTM | min_ipae | binder pLDDT |
+| --- | --- | --- | --- | --- | --- |
+| `her2_cdrh3_2` | `WGPPYFYAMD` | 3 / 10 | 0.946 | 0.331 | 95.6 |
+| `her2_cdrh3_3` | `WASSSEYYFD` | 7 / 10 | 0.965 | 0.310 | 98.5 |
+
+Trastuzumab is `WGGDGFYAMD`. Three things this already tells us:
+
+1. **The novelty ambiguity is not theoretical.** Design 2 changed 3 of 10 positions: eligible under
+   the lenient reading, rejected under the strict one. One of two designs landed on the disputed
+   boundary, so at 300 designs this decides a large fraction of them.
+2. **`pass` is empty and that is expected** — the scorer cannot measure absolute movement on this
+   input. Rank on `min_ipae`, `iptm`, `binder_plddt`.
+3. **ipTM 0.95+ is not evidence of binding.** The Smorodina non-binders score this well too. These
+   numbers are the input to step 2's calibration, not a result.
 
 ### What is on the VM
 
