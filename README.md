@@ -26,9 +26,10 @@ two that improve all three.* This single sentence should drive every cut we make
 `abguard` classifies each design; we do not choose the track. It is never reclassified — miss your
 track's rule and the design is rejected.
 
-- **De novo** — under 70% identity to any known antibody, and at least 2 CDRH3 mutations from trastuzumab.
-- **Optimisation** — everything else. Needs CDRH3 identity to trastuzumab under 70% *and* more than
-  2 point mutations from every provided data point (525,063 CDRH3s across the FACS and SPR tables).
+The track follows from one number, **identity of the whole Fv to trastuzumab**:
+
+- **≥ 70% identity → `novel`** (the optimisation track): an engineered trastuzumab variant.
+- **< 70% identity → `de_novo`**: a molecule of its own.
 
 Prizes are split evenly across the two tracks, so a track with fewer entrants is worth more per design.
 
@@ -37,11 +38,30 @@ Prizes are split evenly across the two tracks, so a track with fewer entrants is
 Format VHH, scFv or Fab · no unpaired cysteines · immunum numbering confidence ≥ 0.1 ·
 total length ≤ 250 aa.
 
-> **Novelty thresholds are stated inconsistently** between the task PDF ("under 70%", "more than 2")
-> and the Apheris HER2 playbook ("at most 70%", "2 or more"). On a 10-residue CDRH3 that is the
-> difference between 3 and 4 changed positions. Build to the strict reading — **≥ 4 positions changed
-> from trastuzumab's `WGGDGFYAMD`, ≥ 3 differences from every provided CDRH3** — and let `abguard` be
-> the arbiter. Confirm with the organisers early; it changes which designs survive.
+### The novelty rule, settled
+
+Read from `abguard`'s source (`novelty.py`, `config.py`), not from the prose. The task PDF and the
+Apheris playbook state this inconsistently and **both are misleading**; the code is the arbiter:
+
+| | |
+| --- | --- |
+| What is compared | the **IMGT CDRH3**, Levenshtein distance |
+| Trastuzumab's IMGT CDRH3 | **`SRWGGDGFYAMDY`** (13-mer) |
+| `novel` needs | **≥ 3** mutations |
+| `de_novo` needs | **≥ 2** mutations |
+| Measured against | trastuzumab **and every CDRH3 in the reference** — 610,109 loops |
+
+Two traps worth stating plainly:
+
+- **The 70% is on the whole Fv and only picks the track.** It is not a pass/fail, and it is not
+  CDRH3 identity, whatever the PDF says.
+- **Use the IMGT 13-mer, never the 10-mer core `WGGDGFYAMD`** the assay tables use. abguard
+  re-derives every reference loop to IMGT precisely because comparing against the cores "would hand
+  every design three free mutations from the flanks alone".
+
+The binding constraint is prior art, not trastuzumab. A loop can sit 3 mutations from trastuzumab and
+still be rejected for landing 2 from something in the FACS screen — which is exactly what happened to
+one of our first two designs.
 
 ### Submission and scoring
 
@@ -91,11 +111,13 @@ Six steps. Parallelise: design on the VM's H100, score on Nebius, keep the slow 
 
 **Blockers — settle these first**
 
-- [ ] Find `abguard` on the VM. It is not on `PATH` and not in the bucket; ask the Apheris team at the
-      event. Without it we are guessing at the filter that rejects designs outright.
+- [x] `abguard` — installed and verified, see [abguard](#abguard). Novelty thresholds read from its
+      source, so there is nothing to ask the organisers.
+- [ ] **Confirm we have the current `abguard` build.** Two different wheels on this VM both call
+      themselves `0.1.0` and one has no novelty gate at all (see below). Ask Apheris whether 11 Nov
+      is the final one before trusting any verdict.
 - [ ] `foundry-toolkit login` — no stored credential, so `module list` and `module describe` fail.
       Probably not blocking: every image is already pulled, and `docker run` needs no login.
-- [ ] Confirm the novelty thresholds with the organisers (see the warning above).
 - [ ] Decide the track split. Recommendation: weight optimisation heavily, keep a few de novo VHHs as
       a lottery ticket, since the prize pots are equal and de novo will likely be thinner.
 
@@ -163,20 +185,26 @@ The organisers' example, `bash Scripts/run-her2.sh all` in `~/rfd4` — **their 
 [notes/RUNTIMES.md](notes/RUNTIMES.md). It proves generate → fold → score works on this GPU. It proves
 nothing about our funnel, which does not exist yet.
 
-| Design | CDRH3 | Changed vs trastuzumab | ipTM | min_ipae | binder pLDDT |
-| --- | --- | --- | --- | --- | --- |
-| `her2_cdrh3_2` | `WGPPYFYAMD` | 3 / 10 | 0.946 | 0.331 | 95.6 |
-| `her2_cdrh3_3` | `WASSSEYYFD` | 7 / 10 | 0.965 | 0.310 | 98.5 |
+| Design | IMGT CDRH3 | vs trastuzumab | vs prior art | ipTM | min_ipae | binder pLDDT | abguard |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `her2_cdrh3_2` | `SRWGPPYFYAMDY` | 3 | **2** | 0.946 | 0.331 | 95.6 | **rejected** |
+| `her2_cdrh3_3` | `SRWASSSEYYFDY` | 7 | ≥ 3 | 0.965 | 0.310 | 98.5 | passes |
 
-Trastuzumab is `WGGDGFYAMD`. Three things this already tells us:
+Trastuzumab is `SRWGGDGFYAMDY`; both designs classify as `novel` (Fv identity 0.99 and 0.97).
+Four things this already tells us:
 
-1. **The novelty ambiguity is not theoretical.** Design 2 changed 3 of 10 positions: eligible under
-   the lenient reading, rejected under the strict one. One of two designs landed on the disputed
-   boundary, so at 300 designs this decides a large fraction of them.
+1. **Half our first designs were rejected, and not by the obvious rule.** Design 2 cleared
+   trastuzumab at distance 3, then landed 2 mutations from `SRWGPYGFYAMDY` in the FACS screen.
+   **Prior art is the binding constraint, not trastuzumab** — and with 610,109 reference loops it
+   will stay that way. Any ranking we build has to run the gate *first*, or we will rank designs
+   that cannot be submitted.
 2. **`pass` is empty and that is expected** — the scorer cannot measure absolute movement on this
    input. Rank on `min_ipae`, `iptm`, `binder_plddt`.
 3. **ipTM 0.95+ is not evidence of binding.** The Smorodina non-binders score this well too. These
    numbers are the input to step 2's calibration, not a result.
+4. **The design model does not know the novelty rule.** It optimises predicted fit, and the HER2
+   weights were trained on the very screen we must stay away from. Expect a real rejection rate and
+   generate with margin.
 
 ### What is on the VM
 
@@ -193,11 +221,46 @@ Checked 14 Nov, 09:45. Almost nothing needs installing — the expensive parts a
 
 | Missing | Cost to fix |
 | --- | --- |
-| **`abguard`** | not on the VM and not in the bucket — **ask Apheris**, no workaround |
-| `immunum` | pip, only if we want the numbering and sequence extraction standalone |
 | PyTorch | `uv pip install torch`, minutes, only for our own models |
 | Nebius skills | `bash agent/install.sh`, ~1 min |
-| RFD4 `Data/`, `Settings/`, `Scripts/` | one `aws s3 sync`, seconds |
+
+### abguard
+
+Installed in `.venv-abguard/` (git-ignored) from the wheel already in the shared `uv` cache —
+a teammate installed it on 11 Nov, so nothing was downloaded:
+
+```bash
+uv venv --python 3.12 .venv-abguard
+VIRTUAL_ENV=$PWD/.venv-abguard uv pip install \
+  ~/.cache/uv/sdists-v10/path/bd466a53b5e23834/nSBDF8oKc5yFGa5i/abguard-0.1.0-py3-none-any.whl
+```
+
+> **Two wheels on this VM both call themselves `abguard 0.1.0`, and they are not the same tool.**
+> The 10 Nov build has no `novelty.py`, no reference data and no novelty gate: it validates the hard
+> filters, reports every design compliant, and never mentions that it skipped the check that matters.
+> We installed it first and got a clean "2/2 valid" on a submission that is **not** valid.
+> Always verify before trusting a verdict:
+>
+> ```bash
+> ./.venv-abguard/bin/abguard --help | grep novelty-report   # must print
+> ```
+
+Usage, no network and no 4.2 GB DuckDB needed — the wheel bundles the reference index
+(610,109 CDRH3s, 2 MB Parquet, IMGT, min_confidence 0.1):
+
+```bash
+./.venv-abguard/bin/abguard team-validate submission.csv          # the real gate
+./.venv-abguard/bin/abguard team-validate submission.csv --drop   # keep the good rows
+./.venv-abguard/bin/abguard novelty-report submission.csv         # trastuzumab only, no prior art
+./.venv-abguard/bin/abguard liability-report submission.csv       # LAP liabilities
+```
+
+Columns: `sequence_id, kind, heavy_sequence, light_sequence, design_description`, with `kind` one of
+`vhh` / `scfv` / `paired`. Two designs validate in 0.5 s, so run it early and often.
+
+**`novelty-report` does not check prior art.** It compares against trastuzumab alone and leaves
+`is_novel_enough` null — it says so in a warning that is easy to miss. Only `team-validate` runs the
+full gate. Do not use the report as a pre-filter and assume the designs are submittable.
 
 `~/.local/bin` is on `PATH` only in a login shell. Over SSH use `ssh ... bash -lc '...'`, or
 `claude`, `uv` and `rcsb-mcp` will look missing when they are not.
