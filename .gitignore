@@ -119,3 +119,7 @@ data/raw/
 # would conflict on every pull, and git cannot merge it, so resolving the
 # conflict silently discards one side's run.
 results/designs.parquet
+
+# Fetched alignments: derived, and re-fetched in about a minute.
+results/msa_out/
+results/msa_in/

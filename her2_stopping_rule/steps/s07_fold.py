@@ -197,6 +197,18 @@ def fold_with(
     # the output directory rather than inside it.
     inputs_dir = workdir / "inputs"
     inputs_dir.mkdir(parents=True, exist_ok=True)
+    # HER2 is the same in every query, so one MSA fetch serves the whole run.
+    # Antibody chains keep their explicit opt-out: a CDR3 has no meaningful
+    # alignment, and searching for one would cost time for nothing.
+    # The container only sees the mounted workdir, so the alignments are
+    # copied inside it rather than referenced where they were fetched.
+    source_msa = cfg.repo_root / cfg.msa_dir
+    msa_dir = workdir / "msa"
+    use_msa = source_msa.exists() and any(source_msa.glob("*.a3m"))
+    if use_msa:
+        msa_dir.mkdir(parents=True, exist_ok=True)
+        for a3m in source_msa.glob("*.a3m"):
+            shutil.copyfile(a3m, msa_dir / a3m.name)
     query_path = queries.write(
         [
             (r["design_id"], r["heavy_sequence"], r["light_sequence"])
@@ -204,6 +216,7 @@ def fold_with(
         ],
         cfg.path("structure"),
         inputs_dir / f"{label}.json",
+        antigen_msa=use_msa,
     )
 
     template = workdir / "template.cif"
@@ -227,6 +240,13 @@ def fold_with(
     ]
     if use_template and template.exists():
         args += ["--template-paths", str(template.relative_to(workdir))]
+    if use_msa:
+        args += [
+            "--msa-dir",
+            str(msa_dir.relative_to(workdir)),
+            "--missing-msas",
+            "ignore",
+        ]
 
     try:
         foundry_run(model, args, workdir=workdir)

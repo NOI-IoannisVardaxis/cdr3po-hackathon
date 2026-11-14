@@ -116,6 +116,10 @@ class Config:
 
     # step 7 fold
     fold_models: tuple[str, ...] = ("boltz2", "openfold3")
+    #: Directory of precomputed antigen MSAs, relative to the repo root. HER2
+    #: is identical in every query, so one fetch serves the whole run. Without
+    #: it OpenFold3 scores the known complex at ipTM 0.152.
+    msa_dir: str = "results/msa_out"
     #: A second model may only define the noise floor if it can reproduce the
     #: complex the epitope was defined from. Measured on the trastuzumab
     #: baseline, no MSA: Boltz-2 scores ipTM 0.952, OpenFold3 0.152, Protenix

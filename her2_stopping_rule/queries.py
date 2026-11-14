@@ -46,11 +46,17 @@ _THREE_TO_ONE: Final[dict[str, str]] = {
 }
 
 
-def antigen_chains(structure_path: Path) -> list[dict[str, object]]:
+def antigen_chains(
+    structure_path: Path, with_msa: bool = False
+) -> list[dict[str, object]]:
     """Read HER2's chains out of the cropped complex.
 
     Args:
         structure_path: The ``her2_fv_1n8z.cif`` the pipeline folds against.
+        with_msa: Omit ``msa_path`` so the model matches these chains to an
+            MSA directory by sequence. An explicit ``null`` is an opt-out that
+            no ``--msa-dir`` can override, which is why it cannot simply be
+            left in place.
 
     Returns:
         One entry per antigen chain, with its sequence and residue numbers.
@@ -71,20 +77,21 @@ def antigen_chains(structure_path: Path) -> list[dict[str, object]]:
                 continue
             sequence.append(code)
             residue_ids.append(str(residue.seqid.num))
-        chains.append(
-            {
-                "chain_id": chain.name,
-                "sequence": "".join(sequence),
-                "msa_path": None,
-                "residue_ids": residue_ids,
-            }
-        )
+        entry: dict[str, object] = {
+            "chain_id": chain.name,
+            "sequence": "".join(sequence),
+            "residue_ids": residue_ids,
+        }
+        if not with_msa:
+            entry["msa_path"] = None
+        chains.append(entry)
     return chains
 
 
 def build(
     designs: list[tuple[str, str, str]],
     structure_path: Path,
+    antigen_msa: bool = False,
 ) -> dict[str, object]:
     """Assemble the query document for a batch of designs.
 
@@ -99,7 +106,7 @@ def build(
         ValueError: If the structure yields no antigen chains, which would
             silently turn every prediction into an unbound Fv fold.
     """
-    antigen = antigen_chains(structure_path)
+    antigen = antigen_chains(structure_path, with_msa=antigen_msa)
     if not antigen:
         raise ValueError(
             f"no antigen chains found in {structure_path}; folding without the "
@@ -123,6 +130,7 @@ def write(
     designs: list[tuple[str, str, str]],
     structure_path: Path,
     path: Path,
+    antigen_msa: bool = False,
 ) -> Path:
     """Write the query file.
 
@@ -135,7 +143,7 @@ def write(
         The path written.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(build(designs, structure_path), indent=1))
+    path.write_text(json.dumps(build(designs, structure_path, antigen_msa), indent=1))
     return path
 
 
