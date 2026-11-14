@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING
 
 import polars as pl
 
+from .. import queries
 from ..config import Config
 from ..foundry import TEMPLATE_CAPABLE, FoundryError, available
 from ..foundry import run as foundry_run
@@ -89,29 +90,48 @@ def write_fasta(df: pl.DataFrame, path: Path) -> Path:
     return path
 
 
-def parse_refold_metrics(path: Path) -> dict[str, dict[str, float]]:
-    """Read ``refold_metrics.csv`` into per-design scores.
+#: Apheris score names, mapped to the short names the table uses.
+SCORE_KEYS = {
+    "interface_predicted_tm_score": "iptm",
+    "predicted_tm_score": "ptm",
+    "average_predicted_local_distance_difference_test": "binder_plddt",
+    "global_predicted_distance_error": "min_ipae",
+    "model_ranking_score": "ranking",
+}
+
+
+def parse_scores(out_dir: Path) -> dict[str, dict[str, float]]:
+    """Read per-design scores out of a Foundry predict run.
+
+    ``predict`` writes one ``*_scores.json`` per design per seed, under
+    ``<design_id>/seed_<n>/``. It does not write ``refold_metrics.csv`` -- that
+    comes from ``refold-score``, which scores RFD4 designs against their own
+    backbones and is not what runs here.
 
     Args:
-        path: The metrics CSV written by ``refold-score``.
+        out_dir: The directory passed to ``--output``.
 
     Returns:
-        A mapping from design id to its metrics. Empty if the file is absent.
+        Per-design metrics under short names. Empty if nothing was written.
     """
-    if not path.exists():
-        return {}
-    frame = pl.read_csv(path)
-    out: dict[str, dict[str, float]] = {}
-    for row in frame.iter_rows(named=True):
-        key = str(row.get("query_id") or row.get("design") or "")
-        if not key:
+    scores: dict[str, dict[str, float]] = {}
+    if not out_dir.exists():
+        return scores
+    for path in sorted(out_dir.glob("*/seed_*/*_scores.json")):
+        design_id = path.parent.parent.name
+        try:
+            payload = json.loads(path.read_text())
+        except json.JSONDecodeError:
             continue
-        out[key] = {
-            name: float(row[name])
-            for name in ("iptm", "min_ipae", "binder_plddt", "ptm", "complex_plddt")
-            if row.get(name) is not None
+        values = {
+            short: float(payload[long])
+            for long, short in SCORE_KEYS.items()
+            if isinstance(payload.get(long), (int, float))
         }
-    return out
+        if values:
+            # Several seeds would each write a file; keep the first.
+            scores.setdefault(design_id, values)
+    return scores
 
 
 def fold_with(
@@ -150,8 +170,18 @@ def fold_with(
     out_dir = workdir / "fold" / label
     if out_dir.exists():
         shutil.rmtree(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    write_fasta(df, out_dir / "designs.fasta")
+    # The model refuses a non-empty --output, so the query file lives beside
+    # the output directory rather than inside it.
+    inputs_dir = workdir / "inputs"
+    inputs_dir.mkdir(parents=True, exist_ok=True)
+    query_path = queries.write(
+        [
+            (r["design_id"], r["heavy_sequence"], r["light_sequence"])
+            for r in df.iter_rows(named=True)
+        ],
+        cfg.path("structure"),
+        inputs_dir / f"{label}.json",
+    )
 
     template = workdir / "template.cif"
     args = [
@@ -160,7 +190,7 @@ def fold_with(
         "apheris_boltz.cli",
         "predict",
         "--input",
-        str((out_dir / "designs.fasta").relative_to(workdir)),
+        str(query_path.relative_to(workdir)),
         "--output",
         str(out_dir.relative_to(workdir)),
         "--write-detailed-scores",
@@ -179,7 +209,7 @@ def fold_with(
         foundry_run(model, args, workdir=workdir)
     except (FoundryError, OSError):
         return {}
-    return parse_refold_metrics(out_dir / "refold_metrics.csv")
+    return parse_scores(out_dir)
 
 
 def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataFrame:
@@ -215,14 +245,14 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
     )
 
     primary, secondary = cfg.fold_models[0], cfg.fold_models[1]
-    scores_primary = fold_with(primary, to_fold, cfg, workdir)
-    scores_secondary = fold_with(secondary, to_fold, cfg, workdir)
-
-    scores_no_template: dict[str, dict[str, float]] = {}
-    if cfg.fold_without_template:
-        scores_no_template = fold_with(
-            primary, to_fold, cfg, workdir, use_template=False
-        )
+    templated = not cfg.fold_without_template
+    scores_primary = fold_with(primary, to_fold, cfg, workdir, use_template=templated)
+    scores_secondary = fold_with(
+        secondary, to_fold, cfg, workdir, use_template=templated
+    )
+    # Recorded separately so step 9 can say whether the epitope was found
+    # unprompted; identical to the primary pass when templates are off.
+    scores_no_template = scores_primary if cfg.fold_without_template else {}
 
     (workdir / "fold_scores.json").write_text(
         json.dumps(

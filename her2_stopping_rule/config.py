@@ -102,7 +102,12 @@ class Config:
     affinity_max_leaf_nodes: int = 63
 
     # step 6a stability
-    packages_per_loop: int = 2
+    #: Only the native framework survives abguard. An engineered VH-VL
+    #: disulfide adds one cysteine to each chain, and both chains already
+    #: carry two, so the count goes odd and abguard's per-chain parity check
+    #: reads an inter-chain disulfide as two unpaired cysteines. Verified:
+    #: all 48 disulfide constructs were rejected, all 48 native ones were not.
+    packages_per_loop: int = 1
     disulfide_cb_min: float = 3.5
     disulfide_cb_max: float = 4.5
     disulfide_sg_max: float = 2.5
@@ -127,9 +132,14 @@ class Config:
     #: Fallback only, used when no baseline fold exists to calibrate against.
     #: Any run that falls back records that it did.
     min_epitope_recovery: float = 0.75
-    #: Fold a control without the 1N8Z template. With the template the model is
-    #: told where trastuzumab binds, so recovering that epitope is partly
-    #: circular; a design that finds it unprompted is the stronger evidence.
+    #: Fold without the 1N8Z template, which is both necessary and preferable.
+    #: Necessary: the raw cropped CIF is rejected by the template parser
+    #: ("errors resolving residue names"), and the cleaned template the
+    #: organisers' smoke test used is written by refold-prepare, which only
+    #: runs on RFD4 design output, not on our enumerated constructs.
+    #: Preferable: a templated fold is told where trastuzumab binds, so
+    #: recovering that epitope would be partly an echo of the input. Verified
+    #: on the baseline, which co-folds to ipTM 0.952 unprompted.
     fold_without_template: bool = True
 
     # step 11 rank

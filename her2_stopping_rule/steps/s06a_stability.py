@@ -7,11 +7,15 @@ ignore, which is what separates an S-tier design from an A-tier one.
 
 Two packages are built per loop, and the second is a deliberate control:
 
-``disulfide``
-    An engineered cysteine pair at the best interface site found by geometry.
-    Sites are scanned rather than hard-coded, because the textbook VH44-VL100
-    pair measures 4.38 A here, at the edge of viability, while a pair of native
-    alanines sits at 4.11 A and takes the substitution without deleting packing.
+``disulfide`` -- **rejected by abguard, off by default**
+    An engineered cysteine pair at the best interface site found by geometry
+    (ALA106 heavy, ALA34 light, C-beta separation 4.11 A, both natives small
+    enough that the substitution costs no packing). abguard refuses every one
+    of them: each chain already carries two cysteines, adding one makes three,
+    and its per-chain parity check reads an inter-chain disulfide as two
+    unpaired cysteines. Measured, not assumed -- 48 of 48 rejected against 0
+    of 48 native. The geometry work stands and the site is recorded; the
+    construct simply cannot be submitted.
 
 ``native``
     The framework unchanged. This exists because the disulfide is a prediction,

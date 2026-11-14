@@ -110,7 +110,7 @@ def write_outputs(df: pl.DataFrame, cfg: Config) -> dict[str, Path]:
         pl.col("kind"),
         pl.col("heavy_sequence"),
         pl.col("light_sequence"),
-        pl.col("reason").fill_null("").alias("design_description"),
+        s02_guard.describe_fallback().alias("design_description"),
     )
     submission_path = s02_guard.write_submission(
         submission, cfg.results_dir / "submission.csv"
@@ -207,7 +207,7 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
             pl.col("kind"),
             pl.col("heavy_sequence"),
             pl.col("light_sequence"),
-            pl.col("reason").fill_null("").alias("design_description"),
+            s02_guard.describe_fallback().alias("design_description"),
         )
         verdicts = s02_guard.validate(payload, cfg)
         rejected = [s for s, v in verdicts.items() if not v.compliant]

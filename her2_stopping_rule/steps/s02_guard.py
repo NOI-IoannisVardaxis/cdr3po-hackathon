@@ -124,6 +124,29 @@ def check_available(cfg: Config) -> str:
     return out
 
 
+def describe_fallback() -> pl.Expr:
+    """Build a design description that is never blank.
+
+    abguard needs one, and ``reason`` is only written at step 11, so anything
+    validating earlier has to say something of its own.
+
+    Returns:
+        An expression producing a short description per design.
+    """
+    return (
+        pl.when(pl.col("reason").is_not_null() & (pl.col("reason") != ""))
+        .then(pl.col("reason"))
+        .otherwise(
+            pl.format(
+                "CDR3 {} ({} mutations), {} framework",
+                pl.col("mutations").fill_null("none"),
+                pl.col("n_mutations").fill_null(0),
+                pl.col("stability_package").fill_null("native"),
+            )
+        )
+    )
+
+
 def write_submission(df: pl.DataFrame, path: Path) -> Path:
     """Write a design table in abguard's submission format.
 
@@ -140,6 +163,22 @@ def write_submission(df: pl.DataFrame, path: Path) -> Path:
     missing = [c for c in SUBMISSION_COLUMNS if c not in df.columns]
     if missing:
         raise ValueError(f"cannot write submission, missing columns: {missing}")
+    # An empty design_description fails abguard's schema, and it fails it
+    # silently: every row is dropped, exit code 0, no error line. Refuse to
+    # write one rather than let a whole run disappear into a clean exit.
+    blank = (
+        df.filter(
+            pl.col("design_description").is_null()
+            | (pl.col("design_description").str.strip_chars() == "")
+        ).height
+        if "design_description" in df.columns
+        else 0
+    )
+    if blank:
+        raise ValueError(
+            f"{blank} design(s) have an empty design_description; abguard drops "
+            "those rows silently, so every design would be rejected"
+        )
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as fh:
         writer = csv.writer(fh)
@@ -281,7 +320,7 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
         pl.col("kind"),
         pl.col("heavy_sequence"),
         pl.col("light_sequence"),
-        pl.col("reason").fill_null("").alias("design_description"),
+        describe_fallback().alias("design_description"),
     )
     verdicts = validate(payload, cfg)
     rejected = {s for s, v in verdicts.items() if not v.compliant}
