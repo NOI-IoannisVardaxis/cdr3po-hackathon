@@ -53,10 +53,12 @@ LIGHT_CDRS: Final[tuple[str, ...]] = ("RASQDVNTAVA", "SASFLYS", "QQHYTTPPT")
 #: Identity below which abguard assigns the de novo track.
 DE_NOVO_IDENTITY: Final[float] = 0.70
 
-#: Sampling temperatures to try. Low stays near native and may not clear the
-#: threshold; high diversifies and risks the fold. Both are tried and whatever
-#: lands under the threshold with the CDRs intact is kept.
-TEMPERATURES: Final[tuple[float, ...]] = (0.2, 0.3)
+#: Sampling temperatures. Measured against the real platform: at T=0.3 every
+#: proposal landed at 0.73-0.75 identity, above the line; at T=0.5 the range is
+#: 0.692-0.736 and roughly one in six clears it. Low temperature stays too
+#: close to native to reach the de novo track at all, so both of these are
+#: high, and the yield is low by design rather than by accident.
+TEMPERATURES: Final[tuple[float, ...]] = (0.4, 0.5)
 
 
 def protected_spans(sequence: str, motifs: tuple[str, ...]) -> set[int]:
@@ -217,8 +219,13 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
 
     rows: list[dict[str, object]] = []
     n_above = 0
-    for parent in parents.iter_rows(named=True):
-        for i, proposal in enumerate(proposals):
+    # One framework per parent, round-robin. The cross product would multiply
+    # the slate by the number of proposals and bury the ranking in near
+    # duplicates that share a backbone.
+    for n, parent in enumerate(parents.iter_rows(named=True)):
+        if proposals:
+            i = n % len(proposals)
+            proposal = proposals[i]
             redesigned_h = proposal.get(HEAVY_CHAIN, "")
             redesigned_l = proposal.get(LIGHT_CHAIN, "")
             if len(redesigned_h) != len(TRASTUZUMAB_VH):

@@ -57,6 +57,95 @@
         "native_cdr3": "SRWGGDGFYAMDY"
       },
       "notes": "823,080 loops in the complete space; 116,760 removed for unpaired cysteine"
+    },
+    {
+      "step": "04a_novelty",
+      "rows_in": 706320,
+      "rows_out": 46808,
+      "dropped": 659512,
+      "seconds": 0.0,
+      "thresholds": {
+        "min_dist_to_provided": 3,
+        "blacklist_size": 525042,
+        "references_scanned_per_group": {
+          "3": 37258
+        },
+        "blacklist_skipped_other_length": 28
+      },
+      "notes": "4,037,480,786 pairs compared; pigeonhole skipped 366,810,184,654 provably distant pairs"
+    },
+    {
+      "step": "05a_affinity",
+      "rows_in": 46808,
+      "rows_out": 400,
+      "dropped": 46408,
+      "seconds": 0.0,
+      "thresholds": {
+        "shortlist_n": 400,
+        "holdout_distance": 4,
+        "holdout_roc_auc": 0.9221,
+        "holdout_base_rate": 0.7459,
+        "precision_at": {
+          "50": 1.0,
+          "100": 1.0,
+          "500": 1.0
+        }
+      },
+      "notes": "held out distance 4 entirely: ROC-AUC 0.922 against a 74.6% base rate"
+    },
+    {
+      "step": "06a_stability",
+      "rows_in": 400,
+      "rows_out": 48,
+      "dropped": 352,
+      "seconds": 0.0,
+      "thresholds": {
+        "packages": [
+          "native",
+          "disulfide"
+        ],
+        "disulfide_cb_window": [
+          3.5,
+          4.5
+        ],
+        "max_total_length": 250
+      },
+      "notes": "24 loops x 2 packages; disulfide at H106ALA-L34ALA, CB-CB 4.11 A, conservative=True"
+    },
+    {
+      "step": "11_rank",
+      "rows_in": 44,
+      "rows_out": 44,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "n_clusters": 24
+      },
+      "notes": "24 loop families represented"
+    },
+    {
+      "step": "12_stop",
+      "rows_in": 44,
+      "rows_out": 20,
+      "dropped": 24,
+      "seconds": 0.0,
+      "thresholds": {
+        "spread_threshold": NaN,
+        "basis": "no measured spread: step 7 did not run, so the cap is the submission limit rather than a stopping rule"
+      },
+      "notes": "kept 20 of 44; no design fell below the threshold"
+    },
+    {
+      "step": "13_submit",
+      "rows_in": 20,
+      "rows_out": 10,
+      "dropped": 10,
+      "seconds": 0.0,
+      "thresholds": {
+        "n_submit": 20,
+        "n_optimisation_ranks": 12
+      },
+      "notes": "wrote submission.csv; abguard rejected ['opt_d3_SRWDGDGAGAMDY__native', 'opt_d3_SRWDGDGTGAMDY__native', 'opt_d3_SRHGGDGAGAMDY__native', 'opt_d3_SRWDGDGFGFMDY__native', 'opt_d3_SRNGGDGAGAMDY__native', 'opt_d3_SRWDGDGWGAMDY__native', 'opt_d3_SRWDGDGKGAMDY__native', 'opt_d3_SRHVGDGFGAMDY__native', 'opt_d3_SRWDGDGFGIMDY__native', 'opt_d3_SRWVGDPFGAMDY__native']"
     }
   ]
 }

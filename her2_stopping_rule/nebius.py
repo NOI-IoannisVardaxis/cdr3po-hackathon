@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -82,14 +83,19 @@ def _parse_mfasta(text: str) -> list[dict[str, str]]:
     """
     samples: list[dict[str, str]] = []
     chunks: list[str] = []
+    keep = False
     for line in text.splitlines():
         if line.startswith(">"):
-            if chunks:
+            if chunks and keep:
                 samples.append(_split_chains("".join(chunks)))
-                chunks = []
+            chunks = []
+            # The first record echoes the input backbone's own sequence, with
+            # its chains run together and no separator. It is the native, not
+            # a design, and including it would hand back trastuzumab.
+            keep = not line[1:].lstrip().startswith("input")
         elif line.strip():
             chunks.append(line.strip())
-    if chunks:
+    if chunks and keep:
         samples.append(_split_chains("".join(chunks)))
     return samples
 
@@ -164,8 +170,11 @@ def design_sequences(
                 "proteinmpnn",
                 "--args-file",
                 str(args_path),
+                # The label doubles as an idempotency key: reusing one with
+                # different inputs is refused, so it carries the parameters
+                # that distinguish this call.
                 "--label",
-                "denovo-framework",
+                f"denovo-T{sampling_temp}-s{seed}-n{n_samples}",
             ],
             capture_output=True,
             text=True,
@@ -179,14 +188,77 @@ def design_sequences(
             f"{(proc.stderr or proc.stdout)[-800:]}"
         )
 
-    try:
-        payload = json.loads(proc.stdout)
-    except json.JSONDecodeError as exc:
+    # `run` streams human-readable progress and leaves the result on the
+    # platform; the artifact comes back through a separate `fetch`.
+    run_id = _run_id(proc.stdout)
+    if run_id is None:
         raise NebiusUnavailableError(
-            f"could not read the platform reply: {proc.stdout[:400]}"
-        ) from exc
+            f"no run id in the platform reply: {proc.stdout[-400:]}"
+        )
+    return fetch(run_id, timeout=timeout)
 
-    mfasta = _find_key(payload, "mfasta") or ""
+
+_RUN_ID_RE = re.compile(r"\b(op-[0-9a-f]{8,})\b")
+
+
+def _run_id(stdout: str) -> str | None:
+    """Pull the operation id out of the client's progress output.
+
+    Args:
+        stdout: What ``forge.py run`` printed.
+
+    Returns:
+        The run id, or None if the output does not name one.
+
+    Examples:
+        >>> _run_id("Run id: op-6d7f00f5a15051fc  (saved in nebius-runs/x.json)")
+        'op-6d7f00f5a15051fc'
+        >>> _run_id("nothing here") is None
+        True
+    """
+    match = _RUN_ID_RE.search(stdout)
+    return match.group(1) if match else None
+
+
+def fetch(run_id: str, timeout: int = 900) -> MpnnResult:
+    """Download a completed run's artifact and read its sequences.
+
+    Args:
+        run_id: The operation id from :func:`design_sequences`.
+        timeout: Seconds before the download is abandoned.
+
+    Returns:
+        The proposed sequences.
+
+    Raises:
+        NebiusUnavailableError: If the artifact cannot be downloaded or read.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        proc = subprocess.run(
+            ["python3", str(FORGE), "fetch", run_id, "--dest", tmp],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+        if proc.returncode != 0:
+            raise NebiusUnavailableError(
+                f"fetch {run_id} failed: {(proc.stderr or proc.stdout)[-600:]}"
+            )
+        payload: dict[str, object] = {}
+        for path in sorted(Path(tmp).glob("*.json")):
+            if path.name == "result.json":
+                continue
+            try:
+                payload = json.loads(path.read_text())
+            except json.JSONDecodeError:
+                continue
+            if _find_key(payload, "mfasta") is not None:
+                break
+
+    mfasta = _find_key(payload, "mfasta")
+    if mfasta is None:
+        raise NebiusUnavailableError(f"no sequences in the artifact for {run_id}")
     return MpnnResult(
         sequences=_parse_mfasta(str(mfasta)),
         coverage=_find_key(payload, "backbone_coverage"),

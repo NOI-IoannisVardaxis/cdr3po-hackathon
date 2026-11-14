@@ -1,0 +1,10 @@
+{
+ "label": "denovo-framework",
+ "model": "proteinmpnn",
+ "tool": "infer_proteinmpnn_native",
+ "key": "oslo-proteinmpnn-denovo-framework",
+ "kind": "inline",
+ "submitted_at": 1794667262.413179,
+ "state": "rejected",
+ "error": "{\"code\": \"REQUEST_REJECTED\", \"retryable\": false, \"status_code\": 409, \"model_id\": \"proteinmpnn\", \"message\": \"idempotency key already identifies different native inputs\", \"next_action\": \"Review the cause; contact support with this request or operation ID if needed.\", \"request_id\": \"d486bf14-28e2-47ce-a8f1-df0cd1c28f21\"}"
+}

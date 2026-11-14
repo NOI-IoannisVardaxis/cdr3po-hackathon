@@ -1,0 +1,11 @@
+{
+ "label": "denovo-T0.5-s2-n6",
+ "model": "proteinmpnn",
+ "tool": "infer_proteinmpnn_native",
+ "key": "oslo-proteinmpnn-denovo-T0.5-s2-n6",
+ "kind": "inline",
+ "submitted_at": 1794667285.6256437,
+ "operation_id": "op-1ceb340fdad5832f",
+ "state": "succeeded",
+ "total_seconds": 94
+}
