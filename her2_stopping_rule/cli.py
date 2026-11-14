@@ -179,17 +179,37 @@ def show_config() -> None:
     default=None,
     help="Contact distance in angstroms.",
 )
-def run_step(name: str, seed: int | None, contact_cutoff_a: float | None) -> None:
+@click.option(
+    "--results-dir",
+    default=None,
+    help="Write outputs here instead of results/, leaving an earlier run intact.",
+)
+def run_step(
+    name: str,
+    seed: int | None,
+    contact_cutoff_a: float | None,
+    results_dir: str | None,
+) -> None:
     """Run one step by name.
 
     Args:
         name: Step name, as printed by ``her2 steps``.
         seed: Optional seed override.
         contact_cutoff_a: Optional contact cutoff override.
+        results_dir: Optional output directory, so a rerun can be written
+            beside a finished one rather than over it.
     """
     if name not in STEPS:
         raise click.BadParameter(f"unknown step {name!r}; try: her2 steps")
-    cfg = _config(seed=seed, contact_cutoff_a=contact_cutoff_a)
+    overrides: dict[str, object] = {
+        "seed": seed,
+        "contact_cutoff_a": contact_cutoff_a,
+    }
+    if results_dir:
+        paths = dict(Config()._rel_paths)
+        paths["results"] = results_dir
+        overrides["_rel_paths"] = paths
+    cfg = _config(**overrides)
     funnel = Funnel(cfg.results_dir, cfg.to_dict())
     df = tbl.load(cfg.results_dir)
 

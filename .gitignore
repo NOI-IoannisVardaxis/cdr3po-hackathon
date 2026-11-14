@@ -123,3 +123,6 @@ results/designs.parquet
 # Fetched alignments: derived, and re-fetched in about a minute.
 results/msa_out/
 results/msa_in/
+results2/designs.parquet
+results2/foundry/
+results2/esmif_out/

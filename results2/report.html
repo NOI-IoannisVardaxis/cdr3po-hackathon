@@ -1,0 +1,75 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>HER2 design run</title>
+<style>
+  :root { color-scheme: light; --ink:#0b0b0b; --muted:#52514e; --line:#dcdbd6;
+           --surface:#fcfcfb; }
+  body { margin:0 auto; max-width:1000px; padding:32px 20px 64px;
+          background:var(--surface); color:var(--ink);
+          font:15px/1.6 ui-sans-serif, system-ui, sans-serif; }
+  h1 { font-size:28px; margin:0 0 4px; }
+  h2 { font-size:19px; margin:36px 0 10px; }
+  .mono { font-family: ui-monospace, Menlo, monospace; font-size:13px; }
+  .n { font-variant-numeric: tabular-nums; text-align:right; }
+  table { border-collapse:collapse; width:100%; font-size:14px; margin-top:8px; }
+  th,td { border-bottom:1px solid var(--line); padding:7px 10px; text-align:left;
+           vertical-align:top; }
+  th { font-size:11px; text-transform:uppercase; letter-spacing:.07em;
+        color:var(--muted); }
+  figure { margin:18px 0; }
+  img { max-width:100%; border:1px solid var(--line); }
+  .warn { color:#e34948; } .ok { color:#008300; }
+  .lede { color:var(--muted); }
+</style>
+<h1>HER2 design run</h1>
+<p class="lede">Every number below was produced by the run that wrote this page.
+Thresholds are recorded beside the counts they produced.</p>
+<p class='warn'>Steps that did not run: 02_guard, 03b_rfd4. Figures and columns that depend on them are absent, not estimated.</p>
+
+<h2>Final designs</h2>
+<table><thead><tr><th>#</th><th>design</th><th>CDR3 (IMGT)</th><th>mutations</th>
+<th>P(high)</th><th>package</th><th>track</th></tr></thead>
+<tbody><tr><td class='n'>1</td><td class='mono'>opt_d3_SREGGDGMWAMDY__native</td><td class='mono'>SREGGDGMWAMDY</td><td class='mono'>W3E,F8M,Y9W</td><td class='n'>0.995</td><td>native</td><td>optimisation</td></tr>
+<tr><td class='n'>2</td><td class='mono'>dn_opt_d3_SRWVGDPFGAMDY__native_m14</td><td class='mono'>SRWVGDPFGAMDY</td><td class='mono'>G4V,G7P,Y9G</td><td class='n'>0.995</td><td>mpnn_framework</td><td>de_novo</td></tr>
+<tr><td class='n'>3</td><td class='mono'>opt_d3_SRNGGDGWPAMDY__native</td><td class='mono'>SRNGGDGWPAMDY</td><td class='mono'>W3N,F8W,Y9P</td><td class='n'>0.995</td><td>native</td><td>optimisation</td></tr>
+<tr><td class='n'>4</td><td class='mono'>dn_opt_d3_SRHGGDGKGAMDY__native_m45</td><td class='mono'>SRHGGDGKGAMDY</td><td class='mono'>W3H,F8K,Y9G</td><td class='n'>0.995</td><td>mpnn_framework</td><td>de_novo</td></tr>
+<tr><td class='n'>5</td><td class='mono'>opt_d3_SRWGGDGMWMMDY__native</td><td class='mono'>SRWGGDGMWMMDY</td><td class='mono'>F8M,Y9W,A10M</td><td class='n'>0.994</td><td>native</td><td>optimisation</td></tr>
+<tr><td class='n'>6</td><td class='mono'>dn_opt_d3_SRWGGDGAGRMDY__native_m50</td><td class='mono'>SRWGGDGAGRMDY</td><td class='mono'>F8A,Y9G,A10R</td><td class='n'>0.994</td><td>mpnn_framework</td><td>de_novo</td></tr>
+<tr><td class='n'>7</td><td class='mono'>opt_d3_SRWGGDGMWIMDY__native</td><td class='mono'>SRWGGDGMWIMDY</td><td class='mono'>F8M,Y9W,A10I</td><td class='n'>0.996</td><td>native</td><td>optimisation</td></tr>
+<tr><td class='n'>8</td><td class='mono'>dn_opt_d3_SRWDGDGNGAMDY__native_m54</td><td class='mono'>SRWDGDGNGAMDY</td><td class='mono'>G4D,F8N,Y9G</td><td class='n'>0.994</td><td>mpnn_framework</td><td>de_novo</td></tr>
+<tr><td class='n'>9</td><td class='mono'>opt_d3_SRWGGDGMWNMDY__native</td><td class='mono'>SRWGGDGMWNMDY</td><td class='mono'>F8M,Y9W,A10N</td><td class='n'>0.995</td><td>native</td><td>optimisation</td></tr>
+<tr><td class='n'>10</td><td class='mono'>opt_d3_SRWDGDGAMAMDY__native</td><td class='mono'>SRWDGDGAMAMDY</td><td class='mono'>G4D,F8A,Y9M</td><td class='n'>0.995</td><td>native</td><td>optimisation</td></tr>
+<tr><td class='n'>11</td><td class='mono'>opt_d3_SRWGGDGMWQMDY__native</td><td class='mono'>SRWGGDGMWQMDY</td><td class='mono'>F8M,Y9W,A10Q</td><td class='n'>0.995</td><td>native</td><td>optimisation</td></tr>
+<tr><td class='n'>12</td><td class='mono'>opt_d3_SRWGGDGMWRMDY__native</td><td class='mono'>SRWGGDGMWRMDY</td><td class='mono'>F8M,Y9W,A10R</td><td class='n'>0.995</td><td>native</td><td>optimisation</td></tr>
+<tr><td class='n'>13</td><td class='mono'>opt_d3_SRWGGDGMWWMDY__native</td><td class='mono'>SRWGGDGMWWMDY</td><td class='mono'>F8M,Y9W,A10W</td><td class='n'>0.995</td><td>native</td><td>optimisation</td></tr>
+<tr><td class='n'>14</td><td class='mono'>opt_d3_SRHGGDGAPAMDY__native</td><td class='mono'>SRHGGDGAPAMDY</td><td class='mono'>W3H,F8A,Y9P</td><td class='n'>0.995</td><td>native</td><td>optimisation</td></tr>
+<tr><td class='n'>15</td><td class='mono'>opt_d3_SRHGGDGAMAMDY__native</td><td class='mono'>SRHGGDGAMAMDY</td><td class='mono'>W3H,F8A,Y9M</td><td class='n'>0.994</td><td>native</td><td>optimisation</td></tr>
+<tr><td class='n'>16</td><td class='mono'>opt_d3_SRHGGDGAQAMDY__native</td><td class='mono'>SRHGGDGAQAMDY</td><td class='mono'>W3H,F8A,Y9Q</td><td class='n'>0.994</td><td>native</td><td>optimisation</td></tr>
+<tr><td class='n'>17</td><td class='mono'>opt_d3_SRWDGDGDPAMDY__native</td><td class='mono'>SRWDGDGDPAMDY</td><td class='mono'>G4D,F8D,Y9P</td><td class='n'>0.994</td><td>native</td><td>optimisation</td></tr></tbody></table>
+
+<h2>Funnel</h2>
+<table><thead><tr><th>step</th><th>in</th><th>out</th><th>sec</th><th>notes</th>
+</tr></thead><tbody><tr><td class='mono'>01_baseline</td><td class='n'>0</td><td class='n'>0</td><td class='n'>0.0</td><td>KD 0.152 nM; contacts at IMGT [3, 7, 8, 9] at 5.0 A; best disulfide site ALA106(H)-ALA34(L) at 4.11 A</td></tr>
+<tr><td class='mono'>03a_enumerate</td><td class='n'>0</td><td class='n'>706,320</td><td class='n'>0.0</td><td>823,080 loops in the complete space; 116,760 removed for unpaired cysteine</td></tr>
+<tr><td class='mono'>04a_novelty</td><td class='n'>706,320</td><td class='n'>46,808</td><td class='n'>0.0</td><td>4,037,480,786 pairs compared; pigeonhole skipped 366,810,184,654 provably distant pairs</td></tr>
+<tr><td class='mono'>05a_affinity</td><td class='n'>46,808</td><td class='n'>400</td><td class='n'>0.0</td><td>held out distance 4 entirely: ROC-AUC 0.922 against a 74.6% base rate</td></tr>
+<tr><td class='mono'>06a_optimisation</td><td class='n'>400</td><td class='n'>96</td><td class='n'>0.0</td><td>96 loops x 1 packages; no viable disulfide site in the geometry window</td></tr>
+<tr><td class='mono'>06b_denovo</td><td class='n'>96</td><td class='n'>123</td><td class='n'>0.0</td><td>T=0.4: 48 proposals; T=0.5: 48 proposals; 27 de novo designs under 0.7 identity, 69 rejected above it. Track is confirmed by abguard, never asserted here.</td></tr>
+<tr><td class='mono'>07_fold</td><td class='n'>68</td><td class='n'>68</td><td class='n'>0.0</td><td>boltz2 scored 69, openfold3 scored 69; no spread measured, both models unavailable; baseline control folded: True; no-template control: 69 scored</td></tr>
+<tr><td class='mono'>08_calibrate</td><td class='n'>68</td><td class='n'>68</td><td class='n'>0.0</td><td>cutoff 0.951 at 5.0% FPR on 8,190 measured non-binders; AUC 0.645, NOT used as a filter - ipTM does not separate binders from non-binders well enough here to drop designs on it</td></tr>
+<tr><td class='mono'>09_epitope</td><td class='n'>68</td><td class='n'>17</td><td class='n'>0.0</td><td>68/68 refolds found; 0 disulfides confirmed closed; native epitope 7 HER2 residues at 5.0 A; threshold 0.900 - 90% of the baseline's own recovery (1.000), measured by the same model in this run</td></tr>
+<tr><td class='mono'>10_express</td><td class='n'>17</td><td class='n'>17</td><td class='n'>0.0</td><td>ran: abguard_liability. Aggrescan 3D, SoluProt and NetSolP skipped: external web services, not enabled. ProteinMPNN soluble weights unavailable on Nebius.</td></tr>
+<tr><td class='mono'>10b_stability</td><td class='n'>17</td><td class='n'>17</td><td class='n'>0.0</td><td>17 designs scored; 3 beat the baseline log-likelihood of -1.0571. A rank, not a Tm.</td></tr>
+<tr><td class='mono'>11_rank</td><td class='n'>17</td><td class='n'>17</td><td class='n'>0.0</td><td>4 loop families represented</td></tr>
+<tr><td class='mono'>12_stop</td><td class='n'>17</td><td class='n'>17</td><td class='n'>0.0</td><td>kept 17 of 17; no design fell below the threshold</td></tr>
+<tr><td class='mono'>13_submit</td><td class='n'>17</td><td class='n'>17</td><td class='n'>0.0</td><td>wrote submission.csv with 17 designs after 1 validation pass(es); abguard: compliant</td></tr>
+<tr><td class='mono'>14_report</td><td class='n'>706,443</td><td class='n'>706,443</td><td class='n'>0.0</td><td>wrote report.html with 6 figures</td></tr></tbody></table>
+
+<h2>Figures</h2>
+<figure><img src='figures/funnel.png' alt='funnel'></figure>
+<figure><img src='figures/funnel_pyramid.png' alt='pyramid'></figure>
+<figure><img src='figures/distance_tradeoff.png' alt='distance_tradeoff'></figure>
+<figure><img src='figures/disulfide_geometry.png' alt='disulfide'></figure>
+<figure><img src='figures/surrogate_roc.png' alt='surrogate_roc'></figure>
+<figure><img src='figures/tier_triangles.png' alt='tiers'></figure>
+</html>

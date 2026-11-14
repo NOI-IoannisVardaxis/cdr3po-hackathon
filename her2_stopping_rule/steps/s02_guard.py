@@ -42,6 +42,28 @@ SUBMISSION_COLUMNS = (
     "design_description",
 )
 
+#: The organisers asked for one file covering both tracks, with a sixth
+#: column naming the track per row. Their spelling, not ours: "optimization"
+#: and "denovo".
+DELIVERY_COLUMNS = (*SUBMISSION_COLUMNS, "track")
+
+#: Our internal track names mapped to the ones the organisers asked for.
+TRACK_LABELS = {"optimisation": "optimization", "de_novo": "denovo"}
+
+
+def delivery_track() -> pl.Expr:
+    """Render the track in the organisers' spelling.
+
+    Returns:
+        An expression producing ``optimization`` or ``denovo`` per row.
+    """
+    return (
+        pl.col("track_predicted")
+        .replace_strict(TRACK_LABELS, default="optimization")
+        .alias("track")
+    )
+
+
 _ERROR_RE = re.compile(
     r"\[(?P<rule>\w+)\]\s+(?P<sid>[\w.\-]+):\s+(?P<message>.*?)(?:$)", re.MULTILINE
 )
@@ -160,7 +182,8 @@ def write_submission(df: pl.DataFrame, path: Path) -> Path:
     Raises:
         ValueError: If a required column is missing.
     """
-    missing = [c for c in SUBMISSION_COLUMNS if c not in df.columns]
+    columns = DELIVERY_COLUMNS if "track" in df.columns else SUBMISSION_COLUMNS
+    missing = [c for c in columns if c not in df.columns]
     if missing:
         raise ValueError(f"cannot write submission, missing columns: {missing}")
     # An empty design_description fails abguard's schema, and it fails it
@@ -182,8 +205,8 @@ def write_submission(df: pl.DataFrame, path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as fh:
         writer = csv.writer(fh)
-        writer.writerow(SUBMISSION_COLUMNS)
-        for row in df.select(SUBMISSION_COLUMNS).iter_rows():
+        writer.writerow(columns)
+        for row in df.select(columns).iter_rows():
             writer.writerow(["" if v is None else v for v in row])
     return path
 

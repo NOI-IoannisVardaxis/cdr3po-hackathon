@@ -1,0 +1,263 @@
+{
+  "config": {
+    "repo_root": "/home/hackathon/irantzu/her2-stopping-rule",
+    "seed": 1,
+    "edit_distances": [
+      3,
+      4
+    ],
+    "min_dist_to_provided": 3,
+    "min_cdrh3_mutations_denovo": 2,
+    "shortlist_n": 400,
+    "affinity_max_iter": 300,
+    "affinity_learning_rate": 0.1,
+    "affinity_max_leaf_nodes": 63,
+    "packages_per_loop": 1,
+    "disulfide_cb_min": 3.5,
+    "disulfide_cb_max": 4.5,
+    "disulfide_sg_max": 2.5,
+    "max_ddg_single": 0.5,
+    "max_ddg_package": -1.0,
+    "fold_models": [
+      "boltz2",
+      "openfold3"
+    ],
+    "msa_dir": "results/msa_out",
+    "min_baseline_iptm": 0.7,
+    "n_finalists": 96,
+    "iptm_fpr": 0.05,
+    "min_iptm_auc": 0.7,
+    "contact_cutoff_a": 5.0,
+    "epitope_recovery_fraction": 0.9,
+    "min_epitope_recovery": 0.75,
+    "fold_without_template": true,
+    "n_clusters": 24,
+    "team_name": "cdr3po",
+    "n_submit": 20,
+    "n_optimisation_ranks": 12
+  },
+  "steps": [
+    {
+      "step": "01_baseline",
+      "rows_in": 0,
+      "rows_out": 0,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "contact_cutoff_a": 5.0
+      },
+      "notes": "KD 0.152 nM; contacts at IMGT [3, 7, 8, 9] at 5.0 A; best disulfide site ALA106(H)-ALA34(L) at 4.11 A"
+    },
+    {
+      "step": "03a_enumerate",
+      "rows_in": 0,
+      "rows_out": 706320,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "edit_distances": [
+          3
+        ],
+        "mutable_positions": "IMGT 3-12",
+        "native_cdr3": "SRWGGDGFYAMDY"
+      },
+      "notes": "823,080 loops in the complete space; 116,760 removed for unpaired cysteine"
+    },
+    {
+      "step": "04a_novelty",
+      "rows_in": 706320,
+      "rows_out": 46808,
+      "dropped": 659512,
+      "seconds": 0.0,
+      "thresholds": {
+        "min_dist_to_provided": 3,
+        "blacklist_size": 525042,
+        "references_scanned_per_group": {
+          "3": 37258
+        },
+        "blacklist_skipped_other_length": 28
+      },
+      "notes": "4,037,480,786 pairs compared; pigeonhole skipped 366,810,184,654 provably distant pairs"
+    },
+    {
+      "step": "05a_affinity",
+      "rows_in": 46808,
+      "rows_out": 400,
+      "dropped": 46408,
+      "seconds": 0.0,
+      "thresholds": {
+        "shortlist_n": 400,
+        "holdout_distance": 4,
+        "holdout_roc_auc": 0.9221,
+        "holdout_base_rate": 0.7459,
+        "precision_at": {
+          "50": 1.0,
+          "100": 1.0,
+          "500": 1.0
+        }
+      },
+      "notes": "held out distance 4 entirely: ROC-AUC 0.922 against a 74.6% base rate"
+    },
+    {
+      "step": "06a_optimisation",
+      "rows_in": 400,
+      "rows_out": 96,
+      "dropped": 304,
+      "seconds": 0.0,
+      "thresholds": {
+        "packages": [
+          "native"
+        ],
+        "disulfide_cb_window": [
+          3.5,
+          4.5
+        ],
+        "max_total_length": 250
+      },
+      "notes": "96 loops x 1 packages; no viable disulfide site in the geometry window"
+    },
+    {
+      "step": "06b_denovo",
+      "rows_in": 96,
+      "rows_out": 123,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "de_novo_identity": 0.7,
+        "temperatures": [
+          0.4,
+          0.5
+        ],
+        "proteinmpnn_weights": "v_48_020 vanilla"
+      },
+      "notes": "T=0.4: 48 proposals; T=0.5: 48 proposals; 27 de novo designs under 0.7 identity, 69 rejected above it. Track is confirmed by abguard, never asserted here."
+    },
+    {
+      "step": "07_fold",
+      "rows_in": 68,
+      "rows_out": 68,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "models": [
+          "boltz2",
+          "openfold3"
+        ],
+        "seed": 1,
+        "fold_without_template": true,
+        "baseline_control": "baseline_trastuzumab",
+        "baseline_iptm_primary": 0.952,
+        "baseline_iptm_secondary": 0.152,
+        "min_baseline_iptm": 0.7,
+        "spread_usable": false
+      },
+      "notes": "boltz2 scored 69, openfold3 scored 69; no spread measured, both models unavailable; baseline control folded: True; no-template control: 69 scored"
+    },
+    {
+      "step": "08_calibrate",
+      "rows_in": 68,
+      "rows_out": 68,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "iptm_cutoff": 0.9513978362083437,
+        "target_fpr": 0.05,
+        "achieved_fpr": 0.04993894993894994,
+        "iptm_auc": 0.6453769673549893,
+        "used_as_filter": false,
+        "source": "iptm_confidence_scores/boltz2_matrix_clean.csv"
+      },
+      "notes": "cutoff 0.951 at 5.0% FPR on 8,190 measured non-binders; AUC 0.645, NOT used as a filter - ipTM does not separate binders from non-binders well enough here to drop designs on it"
+    },
+    {
+      "step": "09_epitope",
+      "rows_in": 68,
+      "rows_out": 17,
+      "dropped": 51,
+      "seconds": 0.0,
+      "thresholds": {
+        "contact_cutoff_a": 5.0,
+        "epitope_threshold": 0.9,
+        "threshold_basis": "90% of the baseline's own recovery (1.000), measured by the same model in this run",
+        "baseline_self_recovery": 1.0,
+        "disulfide_sg_max": 2.5,
+        "native_epitope_residues": 7
+      },
+      "notes": "68/68 refolds found; 0 disulfides confirmed closed; native epitope 7 HER2 residues at 5.0 A; threshold 0.900 - 90% of the baseline's own recovery (1.000), measured by the same model in this run"
+    },
+    {
+      "step": "10_express",
+      "rows_in": 17,
+      "rows_out": 17,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "tools_attempted": [
+          "abguard_liability"
+        ],
+        "external_web_services": false,
+        "proteinmpnn_weights": "v_48_020 vanilla; soluble weights unavailable"
+      },
+      "notes": "ran: abguard_liability. Aggrescan 3D, SoluProt and NetSolP skipped: external web services, not enabled. ProteinMPNN soluble weights unavailable on Nebius."
+    },
+    {
+      "step": "10b_stability",
+      "rows_in": 17,
+      "rows_out": 17,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "model": "esm-if1",
+        "baseline_log_likelihood": -1.057053303964758,
+        "bar": "beat the baseline's own score, same model same run",
+        "is_melting_temperature": false
+      },
+      "notes": "17 designs scored; 3 beat the baseline log-likelihood of -1.0571. A rank, not a Tm."
+    },
+    {
+      "step": "11_rank",
+      "rows_in": 17,
+      "rows_out": 17,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "n_clusters": 24
+      },
+      "notes": "4 loop families represented"
+    },
+    {
+      "step": "12_stop",
+      "rows_in": 17,
+      "rows_out": 17,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "spread_threshold": NaN,
+        "basis": "no usable spread: either step 7 did not run, or the second model could not reproduce the baseline complex, so its disagreement measures its own failure rather than our uncertainty. The cap is the submission limit, and this run has no stopping rule."
+      },
+      "notes": "kept 17 of 17; no design fell below the threshold"
+    },
+    {
+      "step": "13_submit",
+      "rows_in": 17,
+      "rows_out": 17,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "n_submit": 20,
+        "n_optimisation_ranks": 12,
+        "refill_passes_used": 1
+      },
+      "notes": "wrote submission.csv with 17 designs after 1 validation pass(es); abguard: compliant"
+    },
+    {
+      "step": "14_report",
+      "rows_in": 706443,
+      "rows_out": 706443,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {},
+      "notes": "wrote report.html with 6 figures"
+    }
+  ]
+}

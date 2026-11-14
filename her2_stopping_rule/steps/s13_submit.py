@@ -111,6 +111,7 @@ def write_outputs(df: pl.DataFrame, cfg: Config) -> dict[str, Path]:
         pl.col("heavy_sequence"),
         pl.col("light_sequence"),
         s02_guard.describe_fallback().alias("design_description"),
+        s02_guard.delivery_track(),
     )
     submission_path = s02_guard.write_submission(
         submission, cfg.results_dir / "submission.csv"
