@@ -1,0 +1,60 @@
+{
+  "config": {
+    "repo_root": "/home/hackathon/irantzu/her2-stopping-rule",
+    "seed": 1,
+    "edit_distances": [
+      3
+    ],
+    "min_dist_to_provided": 3,
+    "min_cdrh3_mutations_denovo": 2,
+    "shortlist_n": 400,
+    "affinity_max_iter": 300,
+    "affinity_learning_rate": 0.1,
+    "affinity_max_leaf_nodes": 63,
+    "packages_per_loop": 2,
+    "disulfide_cb_min": 3.5,
+    "disulfide_cb_max": 4.5,
+    "disulfide_sg_max": 2.5,
+    "max_ddg_single": 0.5,
+    "max_ddg_package": -1.0,
+    "fold_models": [
+      "boltz2",
+      "openfold3"
+    ],
+    "n_finalists": 48,
+    "iptm_fpr": 0.05,
+    "contact_cutoff_a": 5.0,
+    "min_epitope_recovery": 0.75,
+    "n_clusters": 24,
+    "n_submit": 20,
+    "n_optimisation_ranks": 12
+  },
+  "steps": [
+    {
+      "step": "01_baseline",
+      "rows_in": 0,
+      "rows_out": 0,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "contact_cutoff_a": 5.0
+      },
+      "notes": "KD 0.152 nM; contacts at IMGT [3, 7, 8, 9] at 5.0 A; best disulfide site ALA106(H)-ALA34(L) at 4.11 A"
+    },
+    {
+      "step": "03a_enumerate",
+      "rows_in": 0,
+      "rows_out": 706320,
+      "dropped": 0,
+      "seconds": 0.0,
+      "thresholds": {
+        "edit_distances": [
+          3
+        ],
+        "mutable_positions": "IMGT 3-12",
+        "native_cdr3": "SRWGGDGFYAMDY"
+      },
+      "notes": "823,080 loops in the complete space; 116,760 removed for unpaired cysteine"
+    }
+  ]
+}

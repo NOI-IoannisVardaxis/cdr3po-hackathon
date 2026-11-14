@@ -1,0 +1,84 @@
+{
+  "cdr3_imgt": "SRWGGDGFYAMDY",
+  "kd_nm": 0.152,
+  "contact_cutoff_a": 5.0,
+  "contact_positions": [
+    3,
+    7,
+    8,
+    9
+  ],
+  "contacts_per_imgt": {
+    "3": 11,
+    "4": 0,
+    "5": 0,
+    "6": 0,
+    "7": 22,
+    "8": 3,
+    "9": 53,
+    "10": 0,
+    "11": 0,
+    "12": 0
+  },
+  "n_her2_residues": 7,
+  "contact_sensitivity": {
+    "4.0": [
+      7,
+      9
+    ],
+    "4.5": [
+      3,
+      7,
+      8,
+      9
+    ],
+    "5.0": [
+      3,
+      7,
+      8,
+      9
+    ],
+    "6.0": [
+      3,
+      5,
+      6,
+      7,
+      8,
+      9
+    ]
+  },
+  "disulfide_candidates": [
+    {
+      "heavy_seqid": 106,
+      "heavy_residue": "ALA",
+      "light_seqid": 34,
+      "light_residue": "ALA",
+      "cb_distance": 4.1050492079876415,
+      "conservative": true
+    },
+    {
+      "heavy_seqid": 110,
+      "heavy_residue": "TRP",
+      "light_seqid": 43,
+      "light_residue": "ALA",
+      "cb_distance": 3.6945953770338686,
+      "conservative": false
+    },
+    {
+      "heavy_seqid": 106,
+      "heavy_residue": "ALA",
+      "light_seqid": 49,
+      "light_residue": "TYR",
+      "cb_distance": 3.9423997767857086,
+      "conservative": false
+    },
+    {
+      "heavy_seqid": 45,
+      "heavy_residue": "LEU",
+      "light_seqid": 98,
+      "light_residue": "PHE",
+      "cb_distance": 4.379096139616023,
+      "conservative": false
+    }
+  ]
+}

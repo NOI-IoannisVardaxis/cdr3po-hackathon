@@ -16,6 +16,13 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "click>=8.1.8",
+    "gemmi>=0.7.5",
+    "matplotlib>=3.11.2",
+    "numpy>=2.4.6",
+    "polars>=2.1.0",
+    "pyarrow>=26.0.1",
+    "scikit-learn>=1.9.1",
+    "scipy>=1.17.1",
 ]
 version = "0.0.1"
 # dynamic = ["version"]
@@ -38,6 +45,7 @@ dev = [
 ]
 
 [project.scripts]
+her2 = "her2_stopping_rule.cli:main"
 her2_stopping_rule = "her2_stopping_rule.__main__:main"
 
 [tool.uv]
@@ -65,3 +73,7 @@ line-length = 88 # Same as Black.
 
 [tool.isort]
 profile = "black"
+
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "scipy.*", "gemmi.*"]
+ignore_missing_imports = true
