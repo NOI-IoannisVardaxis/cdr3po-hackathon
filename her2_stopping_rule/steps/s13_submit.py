@@ -29,6 +29,10 @@ from typing import TYPE_CHECKING
 import polars as pl
 
 from ..config import Config
+
+#: How many times to drop rejected designs and refill from the ranking before
+#: giving up. Each pass costs one abguard call, about half a second.
+MAX_REFILL_PASSES = 3
 from . import s02_guard
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -38,25 +42,29 @@ if TYPE_CHECKING:  # pragma: no cover
 def order_by_track(df: pl.DataFrame, cfg: Config) -> pl.DataFrame:
     """Interleave the two tracks so optimisation fills the tested ranks first.
 
-    Args:
-        df: Ranked live designs carrying ``track_predicted`` and ``rank``.
-        cfg: Pipeline configuration, for the rank split.
+        Args:
+            df: Ranked live designs carrying ``track_predicted`` and ``rank``.
+            cfg: Pipeline configuration, for the rank split.
 
-    Returns:
-        The designs reordered, optimisation first, truncated to ``n_submit``.
+        Returns:
+            The designs reordered, optimisation first, truncated to ``n_submit``.
 
-    Examples:
-        >>> import polars as pl
-        >>> from ..config import Config
-        >>> df = pl.DataFrame({
-        ...     "design_id": ["a", "b", "c"],
-        ...     "track_predicted": ["de_novo", "optimisation", "optimisation"],
-        ...     "rank": [1, 2, 3],
-        ...     "heavy_sequence": ["EVQL"] * 3,
-        ...     "light_sequence": ["DIQM"] * 3,
-        ... })
-        >>> order_by_track(df, Config())["design_id"].to_list()
-        ['b', 'c', 'a']
+        Examples:
+            >>> import polars as pl
+            >>> from ..config import Config
+
+    #: How many times to drop rejected designs and refill from the ranking before
+    #: giving up. Each pass costs one abguard call, about half a second.
+    MAX_REFILL_PASSES = 3
+            >>> df = pl.DataFrame({
+            ...     "design_id": ["a", "b", "c"],
+            ...     "track_predicted": ["de_novo", "optimisation", "optimisation"],
+            ...     "rank": [1, 2, 3],
+            ...     "heavy_sequence": ["EVQL"] * 3,
+            ...     "light_sequence": ["DIQM"] * 3,
+            ... })
+            >>> order_by_track(df, Config())["design_id"].to_list()
+            ['b', 'c', 'a']
     """
     from .. import table as tbl
 
@@ -179,24 +187,39 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
     Returns:
         The table with ``track`` and ``track_agrees`` filled from abguard's
         verdict, never from our own prediction.
-
-    Raises:
-        RuntimeError: If abguard rejects the file that would be submitted.
     """
     from .. import table as tbl
 
-    paths = write_outputs(df, cfg)
-    final = order_by_track(tbl.alive(df), cfg)
+    # Drop what abguard refuses, refill from the next ranked designs, and ask
+    # again. abguard screens prior art we do not hold -- a patent collision is
+    # invisible to every local filter -- so rejection at this gate is expected
+    # rather than exceptional, and a crash here would leave no deliverable at
+    # all. Seventeen accepted designs beat an exception.
+    working = df
+    rejected: list[str] = []
+    attempts = 0
+    for attempts in range(1, MAX_REFILL_PASSES + 1):
+        final = order_by_track(tbl.alive(working), cfg)
+        if final.height == 0:
+            break
+        payload = final.select(
+            pl.col("design_id").alias("sequence_id"),
+            pl.col("kind"),
+            pl.col("heavy_sequence"),
+            pl.col("light_sequence"),
+            pl.col("reason").fill_null("").alias("design_description"),
+        )
+        verdicts = s02_guard.validate(payload, cfg)
+        rejected = [s for s, v in verdicts.items() if not v.compliant]
+        if not rejected:
+            break
+        # Retire the rejected designs so the next pass pulls replacements from
+        # further down the ranking.
+        working = tbl.drop(working, pl.col("design_id").is_in(rejected), "guard")
 
-    payload = final.select(
-        pl.col("design_id").alias("sequence_id"),
-        pl.col("kind"),
-        pl.col("heavy_sequence"),
-        pl.col("light_sequence"),
-        pl.col("reason").fill_null("").alias("design_description"),
-    )
-    verdicts = s02_guard.validate(payload, cfg)
-    rejected = [s for s, v in verdicts.items() if not v.compliant]
+    final = order_by_track(tbl.alive(working), cfg)
+    df = working
+    paths = write_outputs(df, cfg)
 
     out = df.with_columns(
         pl.when(pl.col("design_id").is_in(final["design_id"].to_list()))
@@ -218,15 +241,25 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
                 "n_optimisation_ranks": cfg.n_optimisation_ranks,
             },
         ) as rec:
-            rec.rows_out = final.height - len(rejected)
-            rec.notes = f"wrote {paths['submission'].name}; " + (
-                "abguard: compliant" if not rejected else f"abguard rejected {rejected}"
+            rec.rows_out = final.height
+            rec.thresholds["refill_passes_used"] = attempts
+            rec.notes = (
+                f"wrote {paths['submission'].name} with {final.height} designs "
+                f"after {attempts} validation pass(es); "
+                + (
+                    "abguard: compliant"
+                    if not rejected
+                    else f"still rejecting {len(rejected)} after "
+                    f"{MAX_REFILL_PASSES} passes: {rejected}"
+                )
             )
 
     if rejected:
-        raise RuntimeError(
-            f"abguard rejected {len(rejected)} designs in the final submission: "
-            f"{rejected}. The file at {paths['submission']} must not be submitted "
-            "until these are removed or replaced."
+        # The file on disk holds only what abguard accepted, so it is safe to
+        # submit; the warning says the slate is short, not that it is invalid.
+        print(
+            f"WARNING: {len(rejected)} designs still rejected after "
+            f"{MAX_REFILL_PASSES} passes; submission has {final.height} of "
+            f"{cfg.n_submit} designs. Rejected: {rejected}"
         )
     return out

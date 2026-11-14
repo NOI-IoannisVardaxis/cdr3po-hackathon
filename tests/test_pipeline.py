@@ -346,3 +346,27 @@ def test_guard_uses_membership_not_error_parsing() -> None:
     assert not verdicts["b"].compliant
     # c has no error line at all and must still be rejected.
     assert not verdicts["c"].compliant
+
+
+def test_submit_refills_instead_of_crashing() -> None:
+    """A rejection at the final gate must shorten the slate, not kill the run.
+
+    abguard screens prior art no local filter holds, so rejection there is
+    expected. Raising would leave no deliverable at all.
+    """
+    import inspect
+
+    from her2_stopping_rule.steps import s13_submit
+
+    source = inspect.getsource(s13_submit.run)
+    assert "raise RuntimeError" not in source
+    assert "MAX_REFILL_PASSES" in source
+
+
+def test_novelty_threshold_beyond_block_exactness_is_refused() -> None:
+    """Raising the threshold past what the blocks detect must fail loudly."""
+    from her2_stopping_rule.novelty import BLOCKS, assert_exact_to
+
+    assert_exact_to(len(BLOCKS))
+    with pytest.raises(ValueError, match="blocks detect collisions"):
+        assert_exact_to(len(BLOCKS) + 1)

@@ -27,6 +27,14 @@ from pathlib import Path
 #: Where the Nebius skill ships its client.
 FORGE = Path.home() / ".claude" / "skills" / "nebius-scientific-ai" / "forge.py"
 
+#: forge.py writes its run journal to the *current working directory*, and
+#: that journal is how status, resume and fetch find a job. Launching from
+#: different folders makes runs invisible to each other, and with first calls
+#: taking up to 26 minutes and "never submit the same job twice" as a hard
+#: rule, that is how an expensive job gets duplicated. Every call therefore
+#: runs from the repository root, whatever the caller's own directory.
+RUN_DIR = Path(__file__).resolve().parent.parent
+
 
 class NebiusUnavailableError(RuntimeError):
     """Raised when the platform cannot be reached or is not configured."""
@@ -180,6 +188,7 @@ def design_sequences(
             text=True,
             timeout=timeout,
             check=False,
+            cwd=RUN_DIR,
         )
 
     if proc.returncode != 0:
@@ -240,6 +249,7 @@ def fetch(run_id: str, timeout: int = 900) -> MpnnResult:
             text=True,
             timeout=timeout,
             check=False,
+            cwd=RUN_DIR,
         )
         if proc.returncode != 0:
             raise NebiusUnavailableError(

@@ -96,6 +96,41 @@ def _expand_ranges(starts: np.ndarray, counts: np.ndarray) -> np.ndarray:
     return np.cumsum(out)
 
 
+def assert_exact_to(min_distance: int) -> None:
+    """Refuse a threshold this block layout cannot enforce exactly.
+
+    Three blocks guarantee that any pair within Hamming distance 2 agrees on
+    at least one block, so every such pair is found. A pair at distance 3 can
+    differ in one position per block, collide on nothing, and be skipped -- so
+    a threshold of 3 is sound (a missed distance-3 pair is eligible anyway)
+    but a threshold of 4 is not: the scan would report those designs as far
+    away and the pipeline would pass illegal ones with no error at all.
+
+    The PDF-versus-abguard argument over whether the floor is 3 or 4 makes
+    exactly that change tempting, which is why it raises instead of warning.
+
+    Args:
+        min_distance: The prior-art threshold about to be enforced.
+
+    Raises:
+        ValueError: If the threshold exceeds what the block layout can detect.
+
+    Examples:
+        >>> assert_exact_to(3) is None
+        True
+        >>> assert_exact_to(4)
+        Traceback (most recent call last):
+            ...
+        ValueError: 3 blocks detect collisions exactly to distance 3, not 4; add a block to BLOCKS to raise the threshold
+    """
+    if min_distance > len(BLOCKS):
+        raise ValueError(
+            f"{len(BLOCKS)} blocks detect collisions exactly to distance "
+            f"{len(BLOCKS)}, not {min_distance}; add a block to BLOCKS to "
+            "raise the threshold"
+        )
+
+
 def scan(
     candidates: np.ndarray,
     references: np.ndarray,

@@ -20,7 +20,7 @@ import polars as pl
 
 from ..config import Config
 from ..data import load_blacklist
-from ..novelty import FAR, scan
+from ..novelty import FAR, assert_exact_to, scan
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..funnel import Funnel
@@ -43,6 +43,10 @@ def run(df: pl.DataFrame, cfg: Config, funnel: Funnel | None = None) -> pl.DataF
     live = tbl.alive(df)
     if live.height == 0:
         return df
+
+    # Fail loudly if the threshold exceeds what the block layout can detect
+    # exactly, rather than silently passing illegal designs.
+    assert_exact_to(cfg.min_dist_to_provided)
 
     blacklist = load_blacklist(cfg)
 
